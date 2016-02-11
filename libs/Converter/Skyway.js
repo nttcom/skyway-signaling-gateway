@@ -2,48 +2,77 @@
 
 // Converter/Skyway.js
 
-class SkywayConverter {
-  constructor(){
-  }
-
-  to_cgof(skywayMesg) {
+var SkywayConverter = {
+  // convert mesg format from SkyWay to CGOF.
+  "to_cgof": function(skywayMesg) {
     var cgofMesg = {
-      "mesg" : null,
+      "src"    : "skyway";
+      "mesg"   : null,
       "action" : null
     };
-    // convert into CGOF format
-    //
-    switch(skyway_mesg.type) {
+
+    switch(skywayMesg.type) {
     case "OFFER":
     case "ANSWER":
-      cgof_mesg.action = "forward";
+      cgofMesg.type   = skywayMesg.type;
+      cgofMesg.action = "forward";
+      cgofMesg.mesg   = skywayMesg.payload.sdp;
       break;
     case "CANDIDATE":
-      cgof_mesg.action = "forward";
+      cgofMesg.type   = skywayMesg.type;
+      cgofMesg.action = "forward";
+      cgofMesg.mesg   = skywayMesg.payload;
       break;
     case "X_JANUS":
-      cgof_mesg.action = "forward";
-      break;
+      cgofMesg.type   = skywayMesg.type;
+      cgofMesg.action = "forward";
+      cgofMesg.mesg   = skywayMesg.payload;
     case "PING":
-      cgof_mesg.mesg = JSON.stringify({"type": "pong"});
-      cgof_mesg.action = "sendback";
+      cgofMesg.type   = "X_SKYWAY";
+      cgofMesg.action = "sendback";
+      cgofMesg.mesg   = {"type": "pong"};
       break;
     case "PONG":
     default:
-      cgof_mesg.action = "discard";
+      cgofMesg.type   = "ERROR";
+      cgofMesg.action = "discard";
+      cgofMesg.mesg   = "";
       break;
     }
 
-    return cgof_mesg;
-  }
+    return cgofMesg;
+  };
 
-  to_skyway(cgof_mesg) {
-    var skyway_mesg = {}
+  // convert mesg format from CGOF to SKYWAY.
+  "to_skyway": function(cgofMesg, gwPeerid, brPeerid) {
+    var skywayMesg = {
+      "type"    : null,
+      "payload" : null,
+      "src"     : gwPeerid,
+      "dst"     : brPeerid,
+    }
 
-    // convert to janus format
-    //
-    return skyway_mesg;
-  }
+    switch(cgofMesg.type) {
+    case "OFFER":
+    case "ANSWER":
+      skywayMesg.type    = cgofMesg.type;
+      skywayMesg.payload = { "sdp" : cgof.mesg };
+      break;
+    case "CANDIDATE":
+      skywayMesg.type    = cgofMesg.type;
+      skywayMesg.payload = { "candidate" : cgof.mesg };
+      break;
+    case "X_JANUS":
+      skywayMesg.type    = cgofMesg.type;
+      skywayMesg.payload = cgof.mesg;
+      break;
+    default:
+      skywayMesg.type    = "ERROR";
+      skywayMesg.payload = "";
+    }
+
+    return skywayMesg;
+  };
 }
 
 module.exports = SkywayConverter;

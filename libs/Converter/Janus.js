@@ -5,6 +5,9 @@ var util = require("../util");
 // Connverter/Janus.js
 
 var JanusConverter = {
+  // create request {"janus": "create"} message format
+  // This message is needed to establish connection
+  // to Janus Gateway when Signaling gateway executed
   "fmtReqCreate" : function(transaction_id) {
     return {
       "janus": "create",
