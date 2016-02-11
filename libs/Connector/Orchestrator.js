@@ -1,21 +1,35 @@
 "use strict";
 
+var redis = require("redis")
+  , EventEmitter = require("event").EventEmitter
+
 // Connector/SkyWay.js
 
-class OrchestratorConnector {
-  constructor(){
-    // this.redis = redis.hoge()
+class OrchestratorConnector extends EventEmitter {
+  constructor(pubChannel, subChannels){
+    this.channelname = pubChannel;
+
+    this.publisher = redis.createClient();
+    this.subscribers = [];
   }
 
-  connect(callback){
-    // connect to orchestrator (redis-server)
-    // this.redis.on("hoge", (mesg) -> {
-    //   callback(mesg);
-    // }
+  connect(){
+    for(var channel in this.subChannels) {
+      var subscrier = redis.createClient();
+      subscriber.subscribe(channel);
+      this.mesgHandler(subscriber);
+    }
+  }
+
+  mesgHandler(subscriber){
+    var self = this;
+    subscriber.on("message", function(channel, data) {
+      self.emit("message", {"frome": channel, "data": data});
+    });
   }
 
   send(mesg) {
-    // this.redis.publish(mesg);
+    this.publisher.publish(this.channelname, mesg);
   }
 }
 

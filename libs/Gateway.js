@@ -19,7 +19,7 @@ var JanusConnector = require("./Connector/Janus.js")
   , OrchestratorConnector = require("./Connector/Orchestrator.js")
   , log4js = require("log4js")
 
-var logger = log4js.getLogger("Gateway");
+var logger = log4js.getLogger("Gateway")
 
 var SrvConnectors = {
   "janus": JanusConnector,
@@ -30,18 +30,18 @@ var SrvConnectors = {
 // class definition
 
 class Gateway {
-  constructor(server_name, dst_server /* string or Array of strings */) {
+  constructor(server_name, dst_servers /* string or Array of strings */) {
     // todo verify server_name
     this.server_name = server_name;
-    if(typeof(dst_server) === "string") {
-      this.dst_servers = [dst_server];
+    if(typeof(dst_servers) === "string") {
+      this.dst_servers = [dst_servers];
     } else {
       // todo: this code assuming that dst_server must string or Array,
-      this.dst_servers = dst_server;
+      this.dst_servers = dst_servers;
     }
 
     this.srv_connector = new SrvConnectors[server_name]();
-    this.orc_connector = new OrchestratorConnector();
+    this.orc_connector = new OrchestratorConnector(server_name, this.dst_servers);
   }
 
   init(){
@@ -50,29 +50,34 @@ class Gateway {
   start() {
     logger.debug("hello", this.server_name); // just test
 
-    this.connectToServer();
-    // this.connectToOrchestrator();
+    this.connectToSignalingServer();
+    this.connectToOrchestrator();
   }
 
-  connectToServer(){
+  connectToSignalingServer(){
     // connect to each signaling server and set the handler when message is received
+    var self = this;
+
     this.srv_connector.connect(this.serverHandler);
+    this.srv_connector.on("message", function(data) {
+      self.serverHandler(data);
+    }
   }
 
   connectToOrchestrator(){
     // todo: connect to redis-server and set orchestratorHandler
     this.orc_connector.connect(this.orchestratorHandler);
+    this.orc_connector.on("message", function(data) {
+      self.orchestratorHandler(data.data);
+    }
   }
 
 
 
   serverHandler(data) {
-    switch(data.nextaction) {
+    switch(data.action) {
     case "forward":
       this.postToOrchestrator(data.mesg);
-      break;
-    case "sendback":
-      this.postToServer(data.mesg);
       break;
     case "discard":
       // do nothing.
@@ -88,9 +93,6 @@ class Gateway {
     case "forward":
       this.postToServer(converted.mesg);
       break;
-    case "sendback":
-      this.postToOrchestrator(converted.mesg);
-      break;
     case "discard":
       // do nothing.
       logger.error("unknown data ... discard it");
@@ -104,11 +106,6 @@ class Gateway {
 
   postToOrchestrator(mesg) {
     // add src and dest for gateway module
-    for(var dst in this.dst_servers) if(this.dst_server.hasOwnProperty(dst)) {
-      mesg.src = this.server_name;
-      mesg.dst = dst;
-    }
-
     this.orc_connector.send(mesg);
   }
 
