@@ -17,17 +17,13 @@
 var JanusConnector = require("./Connector/Janus.js")
   , SkywayConnector = require("./Connector/Skyway.js")
   , OrchestratorConnector = require("./Connector/Orchestrator.js")
-  , JanusConverter = require("./Converter/Janus.js")
-  , SkywayConverter = require("./Converter/Skyway.js")
+  , log4js = require("log4js")
+
+var logger = log4js.getLogger("Gateway");
 
 var SrvConnectors = {
   "janus": JanusConnector,
   "skyway": SkywayConnector
-}
-
-var Converters = {
-  "janus": JanusConverter,
-  "skyway": SkywayConverter
 }
 
 ///////////////////////////
@@ -46,17 +42,16 @@ class Gateway {
 
     this.srv_connector = new SrvConnectors[server_name]();
     this.orc_connector = new OrchestratorConnector();
-    this.converter = new Converters[server_name]();
   }
 
   init(){
   }
 
   start() {
-    console.log("hello", this.server_name); // just test
+    logger.debug("hello", this.server_name); // just test
 
     this.connectToServer();
-    this.connectToOrchestrator();
+    // this.connectToOrchestrator();
   }
 
   connectToServer(){
@@ -71,18 +66,15 @@ class Gateway {
 
 
 
-  serverHandler(mesg) {
-    // handle message received from signaling server
-    var converted = this.converter.tocgof(mesg);
-
-    // converted.mesg = converted message
-    // converted.nextaction = "forward | discard | sendback"
-    switch(converted.nextaction) {
+  serverHandler(data) {
+    // data.mesg = converted message
+    // data.nextaction = "forward | discard | sendback"
+    switch(data.nextaction) {
     case "forward":
-      this.postToOrchestrator(converted.mesg);
+      this.postToOrchestrator(data.mesg);
       break;
     case "sendback":
-      this.postToServer(converted.mesg);
+      this.postToServer(data.mesg);
       break;
     case "discard":
       // do nothing.
@@ -92,12 +84,10 @@ class Gateway {
     }
   }
 
-  orchestratorHandler(mesg) {
-    var converted = this.converter.toserver(mesg);
-
-    // converted.mesg = converted message
-    // converted.nextaction = "forward | discard | sendback"
-    switch(converted.nextaction) {
+  orchestratorHandler(data) {
+    // data.mesg = converted message
+    // data.nextaction = "forward | discard | sendback"
+    switch(data.nextaction) {
     case "forward":
       this.postToServer(converted.mesg);
       break;
@@ -126,8 +116,6 @@ class Gateway {
   postToServer(mesg) {
     this.srv_connector.send(mesg);
   }
-
-
 }
 
 module.exports = Gateway;
