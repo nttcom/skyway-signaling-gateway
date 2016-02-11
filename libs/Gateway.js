@@ -67,8 +67,6 @@ class Gateway {
 
 
   serverHandler(data) {
-    // data.mesg = converted message
-    // data.nextaction = "forward | discard | sendback"
     switch(data.nextaction) {
     case "forward":
       this.postToOrchestrator(data.mesg);
@@ -78,15 +76,14 @@ class Gateway {
       break;
     case "discard":
       // do nothing.
+      logger.error("unknown data ... discard it");
       break;
     default:
-      // todo: logging.
+      logger.error("unknown data ... discard it");
     }
   }
 
   orchestratorHandler(data) {
-    // data.mesg = converted message
-    // data.nextaction = "forward | discard | sendback"
     switch(data.nextaction) {
     case "forward":
       this.postToServer(converted.mesg);
@@ -96,9 +93,11 @@ class Gateway {
       break;
     case "discard":
       // do nothing.
+      logger.error("unknown data ... discard it");
       break;
     default:
       // todo: logging.
+      logger.error("unknown data ... discard it");
     }
   }
 

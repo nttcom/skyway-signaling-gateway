@@ -3,6 +3,8 @@
 var util = require("../util")
   , log4js = require("log4js")
   , WebSocket = require("ws")
+  , converter = require("../Converter/Skyway.js")
+  , EventEmitter = require("events").EventEmitter
 
 
 
@@ -14,7 +16,7 @@ var logger = log4js.getLogger("Connector/Skyway");
 
 // Connector/Skyway.js
 
-class SkywayConnector {
+class SkywayConnector extends EventEmitter {
   constructor(){
     // configure static parameter
     this.scheme     = CONF.scheme     || "wss://";
@@ -25,9 +27,9 @@ class SkywayConnector {
     this.origin     = CONF.origin     || "http://localhost";
 
     // configure random parameters
-    this.myid    = util.randomIdForSkyway();
+    this.myPeerid    = util.randomIdForSkyway();
     this.token   = util.randomTokenForSkyway();
-    this.peer_id = null;
+    this.brPeerid = null;
 
     // setup url for SkyWay server
     this.serverUrl = [
@@ -37,7 +39,7 @@ class SkywayConnector {
       this.serverPort,
       this.path,
       "peerjs?key=" + this.apikey,
-      "&id=" + this.myid,
+      "&id=" + this.myPeerid,
       "&token=" + this.token
     ].join("");
   }
@@ -51,21 +53,27 @@ class SkywayConnector {
     this.setSocketHandler();
   }
 
-  send(jsonMsg) {
+  send(cgofMsg) {
     // send message to Skyway server
 
     // todo: check socket status (this.socket  !== null || this.socket.status???)
     try {
+      var skywayMsg = converter.to_skyway(cgofMsg, this.myPeerid, this.brPeerid);
       var strMsg = JSON.stringify(jsonMsg);
 
-      // todo: convert message format from CGOF to skyway specific one.
-
-      // todo: send to skyway server
-      // this.socket.send(@@@);
+      this.socket.send(strMsg);
     } catch(err) {
       logger.error(err);
     }
+  }
 
+  sendback(cgofMesg) {
+    try {
+      var strMsg = JSON.stringify(cgofMesg.mesg);
+      this.socket.send(strMsg);
+    } catch(err) {
+      logger.error(err);
+    }
   }
 
   setSocketHandler(){
@@ -96,9 +104,19 @@ class SkywayConnector {
 
   messageHandlerFromServer(strMsg) {
     try {
-      var jsonMsg = JSON.parse(strMsg);
+      var skywayMsg = JSON.parse(strMsg);
+      if(skywayMsg.type === "OFFER") this.brPeerid = skywayMsg.src;
 
-      // todo : handle message
+      var cgofMsg = converter.to_cgof(skywayMsg);
+      if(cgofMsg.action === "forward"){
+        this.emit("message", {"data": cgofMsg});
+      } else if(cgofMsg.action === "sendback") {
+        this.sendback(cgofMesg);
+      } else if(cgofMsg.action === "discard") {
+        logger.info("cgofMsg requests discard");
+      } else {
+        logger.error("unknown message");
+      }
     } catch(err) {
       logger.error(err);
     }

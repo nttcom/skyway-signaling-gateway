@@ -4,6 +4,7 @@ var log4js = require("log4js")
   , util = require("../util")
   , http = require("http")
   , converter = require("../Converter/Janus")
+  , EventEmitter = require("events").EventEmitter
 
 // todo: load configuration file
 // var CONF = require('../conf/janus.json');
@@ -13,7 +14,7 @@ var logger = log4js.getLogger("Connector/Janus")
 
 // Connector/Janus.js
 
-class JanusConnector {
+class JanusConnector extends EventEmitter{
   constructor(){
     this.serverAddr = CONF.serverAddr || "localhost";
     this.serverPort = CONF.serverPort || 8088;
@@ -35,16 +36,64 @@ class JanusConnector {
     });
   }
 
-  send(mesg) {
+  send(cgofMsg) {
     // send to janus gateway server
-  }
 
-  setSocketHandler() {
-    // create long polling loop
-    // if message is catched, it will be handled via messageHanlerFromServer()
-  }
+    // todo: check socket status (this.socket  !== null || this.socket.status???)
+    try {
+      var janusMsg = converter.to_janus(cgofMsg);
+      var self = this;
 
-  messageHandlerFromServer(strMesg) {
+      if(janusMsg.janus === "attach" ){
+        if(this.session_id === null) return;
+        var path = this.path + "/" + this.session_id;
+      } else {
+        if(this.session_id === null) return;
+        if(this.stream_id === null) return;
+        var path = this.path + "/" + this.session_id + "/" + this.stream_id;
+      }
+
+      var req = http.request(
+          {
+            "hostname": this.serverAddr,
+            "port": this.serverPort,
+            "path": path,
+            "method": "POST",
+            "headers": { "content-type": "application/json" }
+          },
+          function(res) {
+            var data = "";
+            res.setEncoding('utf8');
+            res.on('data', function(chunk) { data += chunk;});
+            res.on('end', function() {
+              try {
+                var resp = JSON.parse(data);
+                if(resp.janus === "success" && resp.transaction === transaction_id && resp.session_id === self.session_id && (self.stream_id ? resp.sender === self.stream_id : true)) {
+                  var cgofMsg = converter.to_cgof(resp);
+                  self.emit("message", {"data": cgofMsg});
+                } else if(resp.janus === "ack" && resp.transaction === transaction && resp.session_id === self.session_id ) {
+                  var cgofMsg = converter.to_cgof(resp);
+                  self.emit("message", {"data": cgofMsg});
+                } else {
+                  logger.error("error while sendMessage janus = " + resp.janus + ", req_transaction = " + transaction + ", res_transaction = " + resp.transaction);
+                }
+              } catch(err) {
+                logger.error(err);
+              }
+            })
+          }
+      );
+
+      req.on('error', function(e) {
+        logger.error("[JANUS]", 'error happened on request: ' + e.message);
+      });
+
+      req.write(JSON.stringify(janusMsg));
+      req.end();
+
+    } catch(err) {
+      logger.error(err);
+    }
   }
 
 
@@ -113,9 +162,10 @@ class JanusConnector {
           res.on('end', function() {
             logger.debug("receive message from LongPolling cycle - %s", data);
             try {
-              var json_data = JSON.parse(data);
+              var janusMsg = JSON.parse(data);
+              var cgofMsg = converter.to_cgof(janusMsg);
+              self.emit("message", {"data": cgofMsg});
               self.startLongPolling(); // loop
-              // todo: fire event
             } catch(e) {
               logger.error(e);
             }
