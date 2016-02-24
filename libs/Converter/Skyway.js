@@ -6,7 +6,7 @@ var SkywayConverter = {
   // convert mesg format from SkyWay to CGOF.
   "to_cgof": function(skywayMesg) {
     var cgofMesg = {
-      "src"    : "skyway";
+      "src"    : "skyway",
       "mesg"   : null,
       "action" : null
     };
@@ -21,27 +21,32 @@ var SkywayConverter = {
     case "CANDIDATE":
       cgofMesg.type   = skywayMesg.type;
       cgofMesg.action = "forward";
-      cgofMesg.mesg   = skywayMesg.payload;
+      cgofMesg.mesg   = skywayMesg.payload.candidate;
       break;
     case "X_JANUS":
       cgofMesg.type   = skywayMesg.type;
       cgofMesg.action = "forward";
       cgofMesg.mesg   = skywayMesg.payload;
+      break;
     case "PING":
       cgofMesg.type   = "X_SKYWAY";
       cgofMesg.action = "sendback";
-      cgofMesg.mesg   = {"type": "pong"};
+      cgofMesg.mesg   = {"type": "PONG"};
       break;
     case "PONG":
+      cgofMesg.type   = "ERROR";
+      cgofMesg.action = "discard";
+      cgofMesg.mesg   = "receive PONG from skyway server";
+      break;
     default:
       cgofMesg.type   = "ERROR";
       cgofMesg.action = "discard";
-      cgofMesg.mesg   = "";
+      cgofMesg.mesg   = "receive unknown type " + skywayMesg.type + " from skyway server";
       break;
     }
 
     return cgofMesg;
-  };
+  },
 
   // convert mesg format from CGOF to SKYWAY.
   "to_skyway": function(cgofMesg, gwPeerid, brPeerid) {
@@ -72,7 +77,7 @@ var SkywayConverter = {
     }
 
     return skywayMesg;
-  };
+  }
 }
 
 module.exports = SkywayConverter;
