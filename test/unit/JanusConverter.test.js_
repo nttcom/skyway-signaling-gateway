@@ -1,0 +1,14 @@
+/* test for JanusConverter.js */
+
+var should = require('chai').should();
+
+var JanusConverter = require('../../libs/Converter/Janus');
+// var data = require('./data/janus.json');
+
+describe('JanusConverter', function() {
+  describe('to_cgof', function(){
+    it("OFFER should be converted as forwarded mesg with sdp", function(){
+    });
+  });
+});
+

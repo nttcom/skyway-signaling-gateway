@@ -1,11 +1,11 @@
-/* test for Converter/Skyway.js */
+/* test for SkywayConverter.js */
 
 var should = require('chai').should();
 
 var SkywayConverter = require('../../libs/Converter/Skyway');
 var data = require('./data/skyway.json');
 
-describe('Converter/Skyway', function() {
+describe('SkywayConverter', function() {
   describe('to_cgof', function(){
     it("OFFER should be converted as forwarded mesg with sdp", function(){
       var skyway_mesg = data.to_cgof.offer.skyway

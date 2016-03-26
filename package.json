@@ -8,7 +8,8 @@
   },
   "main": "index.js",
   "scripts": {
-    "test": "mocha test/index.js"
+    "test": "find ./test -name '*.test.js' | xargs mocha",
+    "devtest": "find ./test -name '*.test.js' | xargs mocha --watch"
   },
   "keywords": [
     "webrtc",
@@ -17,8 +18,11 @@
   "author": "kensaku komatsu",
   "license": "MIT",
   "dependencies": {
+    "backbone": "^1.3.2",
+    "backbone-validation": "^0.11.5",
     "log4js": "^0.6.31",
     "redis": "^2.4.2",
+    "underscore": "^1.8.3",
     "ws": "^1.0.1"
   },
   "devDependencies": {
