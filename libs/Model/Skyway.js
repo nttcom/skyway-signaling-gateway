@@ -3,7 +3,7 @@
 var Backbone = require('backbone')
   , validation = require('backbone-validation')
   , _ = require('underscore')
-  , logger = require('log4js').getLogger()
+  , logger = require('log4js').getLogger("Model/Skyway")
 
 _.extend(Backbone.Model.prototype, validation.mixin);
 
@@ -11,7 +11,7 @@ var Skyway = Backbone.Model.extend({
   initialize() {
     this.bind("validated:invalid", (model, errors) => {
       // TODO : comment out below, (prepend annoying message while test)
-      // if(errors) logger.error("Model/Skyway - ", errors);
+      // if(errors) logger.error(errors);
     });
   },
   defaults: {

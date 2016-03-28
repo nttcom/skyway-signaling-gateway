@@ -2,6 +2,7 @@
 
 var redis = require("redis")
   , EventEmitter = require("event").EventEmitter
+  , logger = require("log4js").getLogger("Connector/Orchestrator");
 
 // Connector/SkyWay.js
 
