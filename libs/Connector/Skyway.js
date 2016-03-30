@@ -28,7 +28,7 @@ class SkywayConnector extends EventEmitter {
     this.origin     = CONF.origin     || "http://localhost";
 
     // configure random parameters
-    this.myPeerid    = util.randomIdForSkyway();
+    this.myPeerid    = "SSG_"+util.randomIdForSkyway();
     this.token   = util.randomTokenForSkyway();
     this.brPeerid = null;
 
