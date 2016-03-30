@@ -83,8 +83,8 @@
 	// Hot Module Replacement
 	if(false) {
 		// When the styles change, update the <style> tags
-		module.hot.accept("!!/home/vagrant/signalinggateway/node_modules/css-loader/index.js!/home/vagrant/signalinggateway/node_modules/mocha/mocha.css", function() {
-			var newContent = require("!!/home/vagrant/signalinggateway/node_modules/css-loader/index.js!/home/vagrant/signalinggateway/node_modules/mocha/mocha.css");
+		module.hot.accept("!!/Users/komasshu/development/signalinggateway/node_modules/css-loader/index.js!/Users/komasshu/development/signalinggateway/node_modules/mocha/mocha.css", function() {
+			var newContent = require("!!/Users/komasshu/development/signalinggateway/node_modules/css-loader/index.js!/Users/komasshu/development/signalinggateway/node_modules/mocha/mocha.css");
 			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 			update(newContent);
 		});
@@ -345,11 +345,14 @@
 
 /***/ },
 /* 9 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
 
 	/* skyway.test.js */
-	// require('./ssgtest')
-	"use strict";
+	__webpack_require__(12);
+
+	hoge;
 
 /***/ },
 /* 10 */
@@ -461,6 +464,14 @@
 	};
 	process.umask = function() { return 0; };
 
+
+/***/ },
+/* 12 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	console.log(6);
 
 /***/ }
 /******/ ]);

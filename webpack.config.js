@@ -41,9 +41,6 @@ module.exports = {
       { test: /\.html$/, loader: 'raw-loader' }
     ]
   },
-  watchOptions: {
-    poll: 100
-  },
   devServer:{
     port: _port
   }

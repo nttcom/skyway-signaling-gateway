@@ -10,7 +10,7 @@
   "scripts": {
     "test": "find ./test/unit -name '*.test.js' | xargs mocha",
     "devtest": "find ./test/unit -name '*.test.js' | xargs mocha --watch",
-    "browsertest": "NODE_ENV=browsertest webpack-dev-server --poll --config webpack.config.js --https --host 192.168.33.10 --inline --content-base ./"
+    "browsertest": "NODE_ENV=browsertest webpack-dev-server --config webpack.config.js --https --inline --content-base ./"
   },
   "keywords": [
     "webrtc",
