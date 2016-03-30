@@ -25,12 +25,15 @@ describe('Model/Skyway', () => {
       expect( skyway.setAll(tmp) ).to.be.true;
 
       // check janus propery deeply
-      ["OFFER", "ANSWER", "CANDIDATE", "PING", "PONG", "X_JANUS", "X_SKYWAY"].forEach((val) => {
+      ["OFFER", "ANSWER", "CANDIDATE", "X_JANUS", "X_SKYWAY"].forEach((val) => {
         tmp.type = val;
+        // when type is OPEN, properties payload, src, dst has to be deleted
         expect( skyway.setAll(tmp) ).to.be.true;
       });
 
       expect( skyway.setAll({"type": "PING"}) ).to.be.true;
+      expect( skyway.setAll({"type": "PONG"}) ).to.be.true;
+      expect( skyway.setAll({"type": "OPEN"}) ).to.be.true;
     });
     /////////////////////////////////////////
     // fail pattern

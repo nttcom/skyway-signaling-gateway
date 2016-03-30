@@ -10,7 +10,7 @@ _.extend(Backbone.Model.prototype, validation.mixin);
 var CGOF = Backbone.Model.extend({
   initialize() {
     this.bind("validated:invalid", (model, errors) => {
-      // TODO : comment out below, (prepend annoying message while test)
+      // TODO : comment out below, (prevent annoying message while test)
       // if(errors) logger.error(errors);
     });
   },
@@ -23,7 +23,7 @@ var CGOF = Backbone.Model.extend({
   validation: {
     type: {
       required: true,
-      oneOf: ["OFFER", "ANSWER", "CANDIDATE", "X_JANUS", "X_SKYWAY", "PING", "PONG"]
+      oneOf: ["OFFER", "ANSWER", "CANDIDATE", "X_JANUS", "X_SKYWAY", "PING", "PONG", "ERROR"]
     },
     message: {
       required: true

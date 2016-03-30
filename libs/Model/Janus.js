@@ -10,21 +10,21 @@ _.extend(Backbone.Model.prototype, validation.mixin);
 var Janus = Backbone.Model.extend({
   initialize() {
     this.bind("validated:invalid", (model, errors) => {
-      // TODO : comment out below, (prepend annoying message while test)
-      // if(errors) logger.error(errors);
+    // TODO : comment out below, (prevent annoying message while test)
+    // if(errors) logger.error(errors);
     });
   },
   defaults: {
-    janus:       null,
-    transaction: null,
-    data:        null,
-    session_id:  null,
-    sender:      null,
-    plugindata:  null,
-    jsep:        null,
-    reason:      null,
-    body:        null,
-    candidate:   null
+    janus:       null
+    // transaction: null,
+    // data:        null,
+    // session_id:  null,
+    // sender:      null,
+    // plugindata:  null,
+    // jsep:        null,
+    // reason:      null,
+    // body:        null,
+    // candidate:   null
   },
   validation: {
     janus: {

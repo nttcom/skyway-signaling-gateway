@@ -18,6 +18,7 @@ var logger = log4js.getLogger("Connector/Skyway");
 
 class SkywayConnector extends EventEmitter {
   constructor(){
+    super();
     // configure static parameter
     this.scheme     = CONF.scheme     || "wss://";
     this.serverAddr = CONF.serverAddr || "skyway.io";
@@ -44,9 +45,11 @@ class SkywayConnector extends EventEmitter {
     ].join("");
   }
 
-  connect(callback){
+  connect(Stub, callback){
     // start websocket connection with Skyway SV
-    this.socket = new WebSocket(this.serverUrl, {"origin": this.origin});
+    // only testing, stub is used
+    console.log(Stub);
+    this.socket = !Stub ?  new WebSocket(this.serverUrl, {"origin": this.origin}) : new Stub(callback);
 
     logger.info("start establishing connection to server");
 
@@ -58,8 +61,9 @@ class SkywayConnector extends EventEmitter {
 
     // todo: check socket status (this.socket  !== null || this.socket.status???)
     try {
+      // todo: fi this.brPeerid is null throw error
       var skywayMsg = converter.to_skyway(cgofMsg, this.myPeerid, this.brPeerid);
-      var strMsg = JSON.stringify(jsonMsg);
+      var strMsg = JSON.stringify(skywayMsg);
 
       this.socket.send(strMsg);
     } catch(err) {
@@ -67,9 +71,9 @@ class SkywayConnector extends EventEmitter {
     }
   }
 
-  sendback(cgofMesg) {
+  sendback(cgofMsg) {
     try {
-      var strMsg = JSON.stringify(cgofMesg.mesg);
+      var strMsg = JSON.stringify(cgofMsg.message);
       this.socket.send(strMsg);
     } catch(err) {
       logger.error(err);
@@ -77,45 +81,50 @@ class SkywayConnector extends EventEmitter {
   }
 
   setSocketHandler(){
-    var self = this;
-
     // connection established
-    this.socket.on("open", function(){
+    this.socket.on("open", () => {
       logger.info("connection established");
     });
 
     // unfortunately, error happened
-    this.socket.on("error", function(err){
+    this.socket.on("error", (err) => {
       logger.error(err);
     });
 
     // connection closed
-    this.socket.on("close", function(err){
+    this.socket.on("close", () => {
       logger.info("connection closed");
     });
 
     // when message received, it will be handled in messageHandler.
-    this.socket.on("message", function(strMsg) {
+    this.socket.on("message", (strMsg)  => {
       logger.debug("message received from SkyWay server : " + strMsg);
 
-      self.messageHandlerFromServer(strMsg);
+      this.messageHandlerFromServer(strMsg);
     });
   }
 
   messageHandlerFromServer(strMsg) {
     try {
       var skywayMsg = JSON.parse(strMsg);
-      if(skywayMsg.type === "OFFER") this.brPeerid = skywayMsg.src;
+      logger.debug("messageHandlerFromServer - ", skywayMsg);
+
+      if(!!this.brPeerid === false && !!skywayMsg.src) {
+        this.brPeerid = skywayMsg.src;
+      }
 
       var cgofMsg = converter.to_cgof(skywayMsg);
-      if(cgofMsg.action === "forward"){
-        this.emit("message", {"data": cgofMsg});
-      } else if(cgofMsg.action === "sendback") {
-        this.sendback(cgofMesg);
-      } else if(cgofMsg.action === "discard") {
-        logger.info("cgofMsg requests discard");
-      } else {
-        logger.error("unknown message");
+
+      switch(cgofMsg.action){
+      case "forward":
+        this.emit("message", cgofMsg);
+        break;
+      case "sendback":
+        this.sendback(cgofMsg);
+      case "discard":
+      default:
+        break;
+
       }
     } catch(err) {
       logger.error(err);

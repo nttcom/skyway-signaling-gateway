@@ -10,7 +10,7 @@ _.extend(Backbone.Model.prototype, validation.mixin);
 var Skyway = Backbone.Model.extend({
   initialize() {
     this.bind("validated:invalid", (model, errors) => {
-      // TODO : comment out below, (prepend annoying message while test)
+      // TODO : comment out below, (prevent annoying message while test)
       // if(errors) logger.error(errors);
     });
   },
@@ -23,7 +23,7 @@ var Skyway = Backbone.Model.extend({
   validation: {
     type: {
       required: true,
-      oneOf: ["OFFER", "ANSWER", "CANDIDATE", "PING", "PONG", "X_JANUS", "X_SKYWAY"]
+      oneOf: ["OPEN", "OFFER", "ANSWER", "CANDIDATE", "PING", "PONG", "X_JANUS", "X_SKYWAY"]
     },
     payload: { required: false, fn: 'isObject' },
     src: { required: false, minLength: 4 },

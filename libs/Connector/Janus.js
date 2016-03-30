@@ -16,6 +16,8 @@ var logger = log4js.getLogger("Connector/Janus")
 
 class JanusConnector extends EventEmitter{
   constructor(){
+    super();
+
     this.serverAddr = CONF.serverAddr || "localhost";
     this.serverPort = CONF.serverPort || 8088;
     this.path       = CONF.path || "/janus";
@@ -68,14 +70,10 @@ class JanusConnector extends EventEmitter{
             res.on('end', function() {
               try {
                 var resp = JSON.parse(data);
-                if(resp.janus === "success" && resp.transaction === transaction_id && resp.session_id === self.session_id && (self.stream_id ? resp.sender === self.stream_id : true)) {
-                  var cgofMsg = converter.to_cgof(resp);
-                  self.emit("message", {"data": cgofMsg});
-                } else if(resp.janus === "ack" && resp.transaction === transaction && resp.session_id === self.session_id ) {
-                  var cgofMsg = converter.to_cgof(resp);
-                  self.emit("message", {"data": cgofMsg});
-                } else {
-                  logger.error("error while sendMessage janus = " + resp.janus + ", req_transaction = " + transaction + ", res_transaction = " + resp.transaction);
+
+                var cgofMsg = converter.to_cgof(resp);
+                if(cgofMsg) {
+                  self.emit("message", cgofMsg);
                 }
               } catch(err) {
                 logger.error(err);
@@ -164,7 +162,7 @@ class JanusConnector extends EventEmitter{
             try {
               var janusMsg = JSON.parse(data);
               var cgofMsg = converter.to_cgof(janusMsg);
-              self.emit("message", {"data": cgofMsg});
+              self.emit("message", cgofMsg);
               self.startLongPolling(); // loop
             } catch(e) {
               logger.error(e);
@@ -180,7 +178,7 @@ class JanusConnector extends EventEmitter{
         logger.error("Lost connection to Janus Gateway");
         return false;
       }
-      self.eventHandler();
+      self.startLongPolling();
     });
 
     req.write("");

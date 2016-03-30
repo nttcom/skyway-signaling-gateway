@@ -20,7 +20,7 @@ describe('Model/CGOF', () => {
       expect(cgof.setAll(tmp)).to.be.true;
 
       // check type property deeply
-      ["ANSWER", "CANDIDATE", "X_JANUS", "X_SKYWAY", "PING", "PONG"].forEach((_type) => {
+      ["ANSWER", "CANDIDATE", "X_JANUS", "X_SKYWAY", "PING", "PONG", "ERROR"].forEach((_type) => {
         tmp.type = _type;
         expect(cgof.setAll(tmp)).to.be.true;
       });

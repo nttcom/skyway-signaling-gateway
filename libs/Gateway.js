@@ -58,18 +58,18 @@ class Gateway {
     // connect to each signaling server and set the handler when message is received
     var self = this;
 
-    this.srv_connector.connect(this.serverHandler);
+    this.srv_connector.connect();
     this.srv_connector.on("message", function(data) {
       self.serverHandler(data);
-    }
+    });
   }
 
   connectToOrchestrator(){
     // todo: connect to redis-server and set orchestratorHandler
-    this.orc_connector.connect(this.orchestratorHandler);
-    this.orc_connector.on("message", function(data) {
-      self.orchestratorHandler(data.data);
-    }
+    this.orc_connector.connect();
+    this.orc_connector.on("message", (data) => {
+      this.orchestratorHandler(data.data);
+    });
   }
 
 
@@ -77,25 +77,18 @@ class Gateway {
   serverHandler(data) {
     switch(data.action) {
     case "forward":
-      this.postToOrchestrator(data.mesg);
-      break;
-    case "discard":
-      // do nothing.
-      logger.error("unknown data ... discard it");
+      this.postToOrchestrator(data.message);
       break;
     default:
+      console.log(data);
       logger.error("unknown data ... discard it");
     }
   }
 
   orchestratorHandler(data) {
-    switch(data.nextaction) {
+    switch(data.action) {
     case "forward":
       this.postToServer(converted.mesg);
-      break;
-    case "discard":
-      // do nothing.
-      logger.error("unknown data ... discard it");
       break;
     default:
       // todo: logging.

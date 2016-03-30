@@ -4,6 +4,7 @@ var util = require("../util")
   , logger = require('log4js').getLogger("Converter/Janus")
   , CGOF = require('../Model/CGOF')
   , Janus = require('../Model/Janus')
+  , _ = require('underscore')
 
 // Connverter/Janus.js
 
@@ -24,9 +25,9 @@ var JanusConverter = {
 
     var _cgof_attrs = {
       "type"  : null,
-      "mesg"  : null,
+      "message"  : null,
       "action": null,
-      "src"   : "JANUS"
+      "source"   : "JANUS"
     };
 
     // case offer or answer
@@ -34,9 +35,12 @@ var JanusConverter = {
       switch(janusMesg.jsep.type) {
       case "offer":
         _cgof_attrs.type = "OFFER";
+        _cgof_attrs.message = {};
+        _cgof_attrs.message.sdp = janusMesg.jsep.sdp;
+        break;
       case "answer":
         _cgof_attrs.type = "ANSWER";
-        _cgof_attrs.mesg = janusMesg;
+        _cgof_attrs.message = janusMesg;
         break;
       default:
         logger.error("janus is event but jsep.type is neither offer or answer");
@@ -52,18 +56,22 @@ var JanusConverter = {
       }
 
       _cgof_attrs.type = "CANDIDATE";
-      _cgof_attrs.mesg = janusMesg.candidate;
+      _cgof_attrs.message = janusMesg.candidate;
       _cgof_attrs.action = "forward";
+    } else if(janusMesg.janus === "keepalive") {
+      _cgof_attrs.type = "X_JANUS";
+      _cgof_attrs.message = janusMesg;
+      _cgof_attrs.action = "discard";
     } else {
       // case extension mesg
       _cgof_attrs.type = "X_JANUS";
-      _cgof_attrs.mesg = janusMesg;
+      _cgof_attrs.message = janusMesg;
       _cgof_attrs.action = "forward";
     }
 
     if(cgof.setAll(_cgof_attrs)) {
         // if valid
-        return cgof;
+        return cgof.attributes;
     } else {
       // if invalid
       logger.error("to_cgof: validation error");
@@ -73,7 +81,7 @@ var JanusConverter = {
 
   // convert message from CGOF to JANUS
   "to_janus" : function(cgofMesg) {
-    var janus = require('Janus');
+    var janus = new Janus();
 
     var _janus_attrs = {}
 
@@ -82,22 +90,24 @@ var JanusConverter = {
     if(cgofMesg.type === "OFFER" || cgofMesg.type === "ANSWER") {
       // case offer & answer
       _janus_attrs.janus = "message";
+      _janus_attrs.body = {};
       _janus_attrs.body.request = "start";
-      _janus_attrs.jsep = cgofMesg.mesg;
+      _janus_attrs.jsep = _.clone(cgofMesg.message);
+      _janus_attrs.jsep.type = "answer";
       _janus_attrs.transaction = util.randomStringForJanus(12);
     } else if(cgofMesg.type === "CANDIDATE") {
       // case candidate
-      _janus_attrs.janus = "tricle";
-      _janus_attrs.candidate = cgofMesg.mesg;
+      _janus_attrs.janus = "trickle";
+      _janus_attrs.candidate = cgofMesg.message.candidate;
       _janus_attrs.transaction = util.randomStringForJanus(12);
-    } if(cgofMesg.type === "X_JANUS") {
+    } else if(cgofMesg.type === "X_JANUS") {
       // case X_JANUS
-      _janus_attrs = cgofMesg.mesg;
+      _janus_attrs = cgofMesg.message;
     }
 
     if(janus.setAll(_janus_attrs)) {
         // if valid
-        return janus;
+        return janus.attributes;
     } else {
       // if invalid
       logger.error("to_janus: validation error");
