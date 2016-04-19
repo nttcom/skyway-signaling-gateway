@@ -100,7 +100,7 @@ class JanusConnector extends EventEmitter{
   createSession(callback){
     // send createSession request to Janus server
     // when received, message contains session_id. utlizing session_id setSocketHandler will be called to catch server sent event
-    var transactionId = util.randomStringForJanus();
+    var transactionId = util.randomStringForJanus(12);
     var req = http.request(
         {
           "hostname": this.serverAddr,
@@ -119,7 +119,7 @@ class JanusConnector extends EventEmitter{
               if(resp.janus === "success" && resp.transaction === transactionId) {
                 callback(resp.data);
               } else {
-                logger.error("error while createSession janus = %s, req_transaction = %s, res_transaction = %s", resp.janus, transaction, resp.transaction);
+                logger.error("error while createSession janus = %s, transactionId = %s, res_transaction = %s", resp.janus, transactionId, resp.transaction);
               }
             } catch(err) {
               logger.error(err);
