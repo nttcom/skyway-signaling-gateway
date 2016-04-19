@@ -22,3 +22,10 @@ target : test/integration/ssg.test.js
 $ npm run browsertest
 ```
 
+* open test site
+
+```bash
+$ open https://192.168.33.10:8080/browsertest.build
+```
+
+please note that ip address is 192.168.33.10 of test machine.
