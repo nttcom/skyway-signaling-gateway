@@ -64,6 +64,7 @@ class SkywayConnector extends EventEmitter {
       // todo: fi this.brPeerid is null throw error
       var skywayMsg = converter.to_skyway(cgofMsg, this.myPeerid, this.brPeerid);
       var strMsg = JSON.stringify(skywayMsg);
+      logger.debug("send - ", strMsg);
 
       this.socket.send(strMsg);
     } catch(err) {
@@ -98,7 +99,7 @@ class SkywayConnector extends EventEmitter {
 
     // when message received, it will be handled in messageHandler.
     this.socket.on("message", (strMsg)  => {
-      logger.debug("message received from SkyWay server : " + strMsg);
+      logger.debug("setSocketHandler - message received from SkyWay server : " + strMsg);
 
       this.messageHandlerFromServer(strMsg);
     });
@@ -107,7 +108,6 @@ class SkywayConnector extends EventEmitter {
   messageHandlerFromServer(strMsg) {
     try {
       var skywayMsg = JSON.parse(strMsg);
-      logger.debug("messageHandlerFromServer - ", skywayMsg);
 
       if(!!this.brPeerid === false && !!skywayMsg.src) {
         this.brPeerid = skywayMsg.src;
@@ -115,7 +115,6 @@ class SkywayConnector extends EventEmitter {
 
       var cgofMsg = converter.to_cgof(skywayMsg);
 
-      logger.debug("messageHandlerFromServer - ", JSON.stringify(cgofMsg));
       switch(cgofMsg.action){
       case "forward":
         this.emit("message", cgofMsg);

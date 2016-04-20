@@ -15,30 +15,27 @@ class OrchestratorConnector extends EventEmitter {
 
     this.publisher = redis.createClient();
     this.subscribers = [];
-
-    this.connect();
   }
 
   connect(){
     this.subChannels.forEach((channel) => {
-      logger.info("subscribing channel: ", channel);
       var subscriber = redis.createClient();
       subscriber.subscribe(channel);
+      logger.info("connect (", this.channelname, ") - subscribed to channel: ", channel);
       this.mesgHandler(subscriber);
     });
   }
 
   mesgHandler(subscriber){
-    var self = this;
     subscriber.on("message", (channel, data) => {
       var parsed_data = JSON.parse(data);
-      logger.debug("mesgHandler - ", this.channelname, "from", channel, "data = ", parsed_data);
-      self.emit("message", parsed_data);
+      logger.debug("mesgHandler (", this.channelname, ") - from", channel, "data = ", parsed_data);
+      this.emit("message", parsed_data);
     });
   }
 
   send(mesg) {
-    logger.debug("send - ", this.channelname, mesg);
+    logger.debug("send (" , this.channelname, ") - ", mesg);
     this.publisher.publish(this.channelname, JSON.stringify(mesg));
   }
 }

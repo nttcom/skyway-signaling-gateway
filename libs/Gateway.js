@@ -79,21 +79,17 @@ class Gateway {
       this.postToOrchestrator(data);
       break;
     default:
-      console.log(data);
-      logger.error("unknown data ... discard it");
+      logger.error("unknown data ... discard it", data);
     }
   }
 
   orchestratorHandler(data) {
-    logger.debug(data, data.action);
-
     switch(data.action) {
     case "forward":
       this.postToServer(data)
       break;
     default:
-      // todo: logging.
-      logger.error("unknown data ... discard it");
+      logger.error("unknown data ... discard it", data);
     }
   }
 

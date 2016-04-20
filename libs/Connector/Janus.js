@@ -43,11 +43,10 @@ class JanusConnector extends EventEmitter{
 
     // todo: check socket status (this.socket  !== null || this.socket.status???)
     try {
-      logger.debug("send - received data: ", cgofMsg);
       var janusMsg = converter.to_janus(cgofMsg);
       var self = this;
 
-      logger.debug("send - converted data: ", janusMsg);
+      logger.debug("send - converted data from ", cgofMsg, "to", janusMsg);
 
 
       if(janusMsg.janus === "attach" ){
@@ -58,8 +57,6 @@ class JanusConnector extends EventEmitter{
         if(this.stream_id === null) return;
         var path = this.path + "/" + this.session_id + "/" + this.stream_id;
       }
-
-      logger.debug("send - ", this.serverAddr, this.serverPort, path);
 
       var req = http.request(
           {
@@ -138,6 +135,7 @@ class JanusConnector extends EventEmitter{
     req.on('error', function(e) {
       logger.error('error happened on request: ' + e.message);
     });
+
 
     var request = converter.fmtReqCreate(transactionId);
     req.write(JSON.stringify(request));
