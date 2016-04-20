@@ -56,11 +56,9 @@ class Gateway {
 
   connectToSignalingServer(){
     // connect to each signaling server and set the handler when message is received
-    var self = this;
-
     this.srv_connector.connect();
-    this.srv_connector.on("message", function(data) {
-      self.serverHandler(data);
+    this.srv_connector.on("message", (data) => {
+      this.serverHandler(data);
     });
   }
 
@@ -68,7 +66,8 @@ class Gateway {
     // todo: connect to redis-server and set orchestratorHandler
     this.orc_connector.connect();
     this.orc_connector.on("message", (data) => {
-      this.orchestratorHandler(data.data);
+      logger.debug("connectToOrchestrator - receive message", data);
+      this.orchestratorHandler(data);
     });
   }
 
@@ -77,7 +76,7 @@ class Gateway {
   serverHandler(data) {
     switch(data.action) {
     case "forward":
-      this.postToOrchestrator(data.message);
+      this.postToOrchestrator(data);
       break;
     default:
       console.log(data);
@@ -86,9 +85,11 @@ class Gateway {
   }
 
   orchestratorHandler(data) {
+    logger.debug(data, data.action);
+
     switch(data.action) {
     case "forward":
-      this.postToServer(converted.mesg);
+      this.postToServer(data)
       break;
     default:
       // todo: logging.

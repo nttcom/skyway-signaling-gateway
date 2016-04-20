@@ -30,10 +30,10 @@ class OrchestratorConnector extends EventEmitter {
 
   mesgHandler(subscriber){
     var self = this;
-    subscriber.on("message", function(channel, data) {
-      var data_ = JSON.parse(data);
-      logger.debug("mesgHandler - ", channel, data_);
-      self.emit("message", {"frome": channel, "data": data_});
+    subscriber.on("message", (channel, data) => {
+      var parsed_data = JSON.parse(data);
+      logger.debug("mesgHandler - ", this.channelname, "from", channel, "data = ", parsed_data);
+      self.emit("message", parsed_data);
     });
   }
 

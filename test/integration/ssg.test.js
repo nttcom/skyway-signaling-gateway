@@ -18,13 +18,15 @@ describe("pcm test", () => {
       console.log(peers);
       var pcm = new PeerCustomMessage(peer, "JANUS");
 
+      pcm.on("message", (data) => {
+        console.log(data);
+      });
+
       var transaction_id = util.randomStringForJanus(12)
-        , param = { "janus": "create", "transaction": transaction_id };
+        , param = { "janus": "attach", "plugin": "janus.plugin.streaming", "transaction": transaction_id };
       console.log(param);
 
-      pcm.get(peers[0], '/create', param, (res) => {
-        console.log(res);
-      });
+      pcm.send(peers[0], param);
     });
 
   });

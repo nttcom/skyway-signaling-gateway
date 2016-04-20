@@ -115,6 +115,7 @@ class SkywayConnector extends EventEmitter {
 
       var cgofMsg = converter.to_cgof(skywayMsg);
 
+      logger.debug("messageHandlerFromServer - ", JSON.stringify(cgofMsg));
       switch(cgofMsg.action){
       case "forward":
         this.emit("message", cgofMsg);
