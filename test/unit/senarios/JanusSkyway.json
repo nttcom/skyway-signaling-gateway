@@ -247,7 +247,10 @@
       {
         "type": "ANSWER",
         "payload": {
-          "sdp":"v=0\r\no=- 6007310248313093647 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE audio video\r\na=msid-semantic: WMS\r\nm=audio 9 RTP/SAVPF 111\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:9BMlsxC80MMY1YHC\r\na=ice-pwd:FR3/v01EKdlv3jPNtpvOEUxt\r\na=fingerprint:sha-256 A8:C8:87:33:3B:F0:84:67:A6:3F:20:53:9B:EA:19:CA:72:45:08:63:64:C0:71:03:27:7E:EC:79:C5:23:EE:86\r\na=setup:active\r\na=mid:audio\r\na=recvonly\r\na=rtcp-mux\r\na=rtpmap:111 opus/48000/2\r\na=fmtp:111 minptime=10; useinbandfec=1\r\na=maxptime:60\r\nm=video 9 RTP/SAVPF 100\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:9BMlsxC80MMY1YHC\r\na=ice-pwd:FR3/v01EKdlv3jPNtpvOEUxt\r\na=fingerprint:sha-256 A8:C8:87:33:3B:F0:84:67:A6:3F:20:53:9B:EA:19:CA:72:45:08:63:64:C0:71:03:27:7E:EC:79:C5:23:EE:86\r\na=setup:active\r\na=mid:video\r\na=recvonly\r\na=rtcp-mux\r\na=rtpmap:100 VP8/90000\r\na=rtcp-fb:100 nack\r\na=rtcp-fb:100 goog-remb\r\n",
+          "sdp": {
+            "sdp": "v=0\r\no=- 6007310248313093647 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE audio video\r\na=msid-semantic: WMS\r\nm=audio 9 RTP/SAVPF 111\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:9BMlsxC80MMY1YHC\r\na=ice-pwd:FR3/v01EKdlv3jPNtpvOEUxt\r\na=fingerprint:sha-256 A8:C8:87:33:3B:F0:84:67:A6:3F:20:53:9B:EA:19:CA:72:45:08:63:64:C0:71:03:27:7E:EC:79:C5:23:EE:86\r\na=setup:active\r\na=mid:audio\r\na=recvonly\r\na=rtcp-mux\r\na=rtpmap:111 opus/48000/2\r\na=fmtp:111 minptime=10; useinbandfec=1\r\na=maxptime:60\r\nm=video 9 RTP/SAVPF 100\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:9BMlsxC80MMY1YHC\r\na=ice-pwd:FR3/v01EKdlv3jPNtpvOEUxt\r\na=fingerprint:sha-256 A8:C8:87:33:3B:F0:84:67:A6:3F:20:53:9B:EA:19:CA:72:45:08:63:64:C0:71:03:27:7E:EC:79:C5:23:EE:86\r\na=setup:active\r\na=mid:video\r\na=recvonly\r\na=rtcp-mux\r\na=rtpmap:100 VP8/90000\r\na=rtcp-fb:100 nack\r\na=rtcp-fb:100 goog-remb\r\n",
+            "type": "answer"
+          },
           "type": "media",
           "connectionId": "mc_0123456789abcdef",
           "metadata": null

@@ -28,7 +28,7 @@ describe("SkywayConnector", () => {
         cgof : {"type": "X_SKYWAY", "message": {"type": "OPEN"}, "source": "SKYWAY", action: "discard"}
       },
       {
-        skyway : {"type": "OFFER", "payload": {sdp:null}, "src": "source", "dst": "destination"},
+        skyway : {"type": "OFFER", "payload": {sdp:{sdp:null, type:"offer"}}, "src": "source", "dst": "destination"},
         cgof : {"type": "OFFER", "message": {sdp:null}, "source": "SKYWAY", action: "forward"}
       },
       {
