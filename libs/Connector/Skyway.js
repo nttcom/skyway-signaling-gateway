@@ -47,8 +47,6 @@ class SkywayConnector extends EventEmitter {
 
   connect(Stub, callback){
     // start websocket connection with Skyway SV
-    // only testing, stub is used
-    console.log(Stub);
     this.socket = !Stub ?  new WebSocket(this.serverUrl, {"origin": this.origin}) : new Stub(callback);
 
     logger.info("start establishing connection to server");
@@ -109,7 +107,7 @@ class SkywayConnector extends EventEmitter {
     try {
       var skywayMsg = JSON.parse(strMsg);
 
-      if(!!this.brPeerid === false && !!skywayMsg.src) {
+      if(!!skywayMsg.src) {
         this.brPeerid = skywayMsg.src;
       }
 

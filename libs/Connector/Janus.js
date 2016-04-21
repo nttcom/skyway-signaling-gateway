@@ -22,7 +22,7 @@ class JanusConnector extends EventEmitter{
     this.serverPort = CONF.serverPort || 8088;
     this.path       = CONF.path || "/janus";
     this.session_id = null;
-    this.stream_id  = null;
+    this.attach_id  = null;
     this.retries    = 0;
   }
 
@@ -30,7 +30,7 @@ class JanusConnector extends EventEmitter{
     var self = this;
     this.createSession(function(resp){
       var session_id = resp.id;
-      logger.info("server connection established (%s)", session_id);
+      logger.info("connection to server established (session_id = %s)", session_id);
       self.session_id = session_id;
 
       // start LongPolling so that process handle server sent event message
@@ -54,36 +54,49 @@ class JanusConnector extends EventEmitter{
         var path = this.path + "/" + this.session_id;
       } else {
         if(this.session_id === null) return;
-        if(this.stream_id === null) return;
-        var path = this.path + "/" + this.session_id + "/" + this.stream_id;
+        if(this.attach_id === null) return;
+        var path = this.path + "/" + this.session_id + "/" + this.attach_id;
       }
 
-      var req = http.request(
-          {
-            "hostname": this.serverAddr,
-            "port": this.serverPort,
-            "path": path,
-            "method": "POST",
-            "headers": { "content-type": "application/json" }
-          },
-          function(res) {
-            var data = "";
-            res.setEncoding('utf8');
-            res.on('data', function(chunk) { data += chunk;});
-            res.on('end', function() {
-              try {
-                var resp = JSON.parse(data);
-                logger.debug("send - response data from janus", resp);
+      logger.debug("send - path = ", path);
 
-                var cgofMsg = converter.to_cgof(resp);
-                if(cgofMsg) {
-                  self.emit("message", cgofMsg);
+      var req = http.request(
+        {
+          "hostname": this.serverAddr,
+          "port": this.serverPort,
+          "path": path,
+          "method": "POST",
+          "headers": { "content-type": "application/json" }
+        },
+        (res) => {
+          var data = "";
+          res.setEncoding('utf8');
+          res.on('data', (chunk) => { data += chunk;});
+          res.on('end', () => {
+            try {
+              var resp = JSON.parse(data);
+              logger.debug("send - response data from janus", resp);
+
+              // if request is attach, set this.attach_id
+              if(janusMsg.janus === "attach") {
+                if(resp.data && resp.data.id) {
+                  logger.info("plugin attached (attach_id = %s)", resp.data.id);
+                  this.attach_id = resp.data.id;
+                } else {
+                  throw "receive improper attach response";
                 }
-              } catch(err) {
-                logger.error(err);
               }
-            })
-          }
+
+              // convert janus message to CGOF then emit
+              var cgofMsg = converter.to_cgof(resp);
+              if(cgofMsg) {
+                self.emit("message", cgofMsg);
+              }
+            } catch(err) {
+              logger.error(err);
+            }
+          })
+        }
       );
 
       req.on('error', function(e) {

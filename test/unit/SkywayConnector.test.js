@@ -28,8 +28,8 @@ describe("SkywayConnector", () => {
         cgof : {"type": "X_SKYWAY", "message": {"type": "OPEN"}, "source": "SKYWAY", action: "discard"}
       },
       {
-        skyway : {"type": "OFFER", "payload": {}, "src": "source", "dst": "destination"},
-        cgof : {"type": "OFFER", "message": {}, "source": "SKYWAY", action: "forward"}
+        skyway : {"type": "OFFER", "payload": {sdp:null}, "src": "source", "dst": "destination"},
+        cgof : {"type": "OFFER", "message": {sdp:null}, "source": "SKYWAY", action: "forward"}
       },
       {
         skyway : {"type": "PING"},
@@ -83,7 +83,7 @@ describe("SkywayConnector", () => {
     var senarios = [
       {
         cgof : {"type": "ANSWER", "message": {}, "source": "JANUS", action: "forward"},
-        skyway : {"type": "ANSWER", "payload": {}, "src": connector_id, "dst": "browser"}
+        skyway : {"type": "ANSWER", "payload": {sdp: {type: "answer"}, connectionId: "mc_0123456789abcdef", metadata: null, type: "media"}, "src": connector_id, "dst": "browser"}
       },
     ];
 

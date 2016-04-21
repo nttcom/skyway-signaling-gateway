@@ -61,7 +61,7 @@ var JanusConverter = {
     } else if(janusMesg.janus === "keepalive") {
       _cgof_attrs.type = "X_JANUS";
       _cgof_attrs.message = janusMesg;
-      _cgof_attrs.action = "discard";
+      _cgof_attrs.action = "forward";
     } else {
       // case extension mesg
       _cgof_attrs.type = "X_JANUS";

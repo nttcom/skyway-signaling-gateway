@@ -14,9 +14,8 @@ senarios.forEach( (item) => {
       let senario = item.senarios[key];
 
       if(key === "browser2janus") {
-        let skyway_to_cgof = SkywayConverter.to_cgof(senario[0])
-          , sen_ = _.clone(senario[1])
-          , to_janus = JanusConverter.to_janus(senario[1])
+        let skyway_to_cgof = SkywayConverter.to_cgof(_.clone(senario[0]))
+          , to_janus = JanusConverter.to_janus(_.clone(senario[1]))
 
         it( "message from skyway should be converted proper CGOF format", () => {
           expect(skyway_to_cgof).to.deep.equal(senario[1]);

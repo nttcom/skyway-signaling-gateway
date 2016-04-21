@@ -5,9 +5,11 @@ var util = require("../util")
   , logger = require('log4js').getLogger("Converter/Skyway")
   , CGOF = require("../Model/CGOF")
   , Skyway = require("../Model/Skyway")
+  , _ = require('underscore')
 
 var SkywayConverter = {
   // convert mesg format from SkyWay to CGOF.
+  "connectionId": "mc_0123456789abcdef",  // fixme: connectionId should be determined by random function
   "to_cgof": function(skywayMesg) {
     var cgof = new CGOF();
 
@@ -22,13 +24,14 @@ var SkywayConverter = {
     case "ANSWER":
       _cgof_attrs.type    = skywayMesg.type;
       _cgof_attrs.action  = "forward";
-      _cgof_attrs.message = skywayMesg.payload;
-
+      _cgof_attrs.message = {};
+      _cgof_attrs.message.sdp = skywayMesg.payload.sdp.sdp;
       break;
     case "CANDIDATE":
       _cgof_attrs.type    = skywayMesg.type;
       _cgof_attrs.action  = "forward";
-      _cgof_attrs.message = skywayMesg.payload;
+      _cgof_attrs.message = {};
+      _cgof_attrs.message.candidate = skywayMesg.payload.candidate;
       break;
     case "X_JANUS":
       _cgof_attrs.type    = skywayMesg.type;
@@ -68,7 +71,7 @@ var SkywayConverter = {
 
   // convert mesg format from CGOF to SKYWAY.
   "to_skyway": function(cgofMesg, gwPeerid, brPeerid) {
-    var skyway = new Skyway();
+    var skyway = new Skyway()
 
     var _skyway_attrs = {
       "type"    : null,
@@ -81,7 +84,11 @@ var SkywayConverter = {
     case "OFFER":
     case "ANSWER":
       _skyway_attrs.type    = cgofMesg.type;
-      _skyway_attrs.payload = cgofMesg.message;
+      _skyway_attrs.payload = {};
+      _skyway_attrs.payload.sdp = {"sdp": _.clone(cgofMesg.message.sdp), "type" : cgofMesg.type.toLowerCase()};
+      _skyway_attrs.payload.connectionId = this.connectionId;
+      _skyway_attrs.payload.type = "media";  // fixme: type should be media or data based on sdp
+      _skyway_attrs.payload.metadata = null;  // fixme: type should be media or data based on sdp
       break;
     case "CANDIDATE":
       _skyway_attrs.type    = cgofMesg.type;
