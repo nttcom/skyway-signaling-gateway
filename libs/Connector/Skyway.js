@@ -8,9 +8,7 @@ var util = require("../util")
 
 
 
-// todo: load configuration file
-// var CONF = require('../conf/skyway.json');
-var CONF = {}; // just placeholder
+var CONF = require('../../conf/skyway.json');
 
 var logger = log4js.getLogger("Connector/Skyway");
 
@@ -24,8 +22,8 @@ class SkywayConnector extends EventEmitter {
     this.serverAddr = CONF.serverAddr || "skyway.io";
     this.serverPort = CONF.serverPort || 443;
     this.path       = CONF.path       || "/";
-    this.apikey    = CONF.apikey    || "db07bbb6-4ee8-4eb7-b0c2-b8b2e5c69ef9";
-    this.origin     = CONF.origin     || "http://localhost";
+    this.apikey    = CONF.apikey    || "********-****-****-****-************";
+    this.origin     = CONF.origin     || "http://example.com";
 
     // configure random parameters
     this.myPeerid    = "SSG_"+util.randomIdForSkyway();
