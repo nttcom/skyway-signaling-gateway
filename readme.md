@@ -1,5 +1,19 @@
 # Signaling Gateway
 
+Signaling Gateway for Skyway and Janus
+
+## how to run
+
+```bash
+$ cp conf/skyway.json.tmpl conf/skyway.json
+```
+
+change apikey and origin property which are registered in https://skyway.io
+
+```bash
+$ node index.js
+```
+
 ## run unit test (watch)
 
 ```bash
