@@ -42,4 +42,4 @@ $ npm run browsertest
 $ open https://192.168.33.10:8080/browsertest.build
 ```
 
-please note that ip address is 192.168.33.10 of test machine.
+please note that changing may be required for "192.168.33.10" to your ip address of test machine.
