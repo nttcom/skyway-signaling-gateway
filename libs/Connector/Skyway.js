@@ -60,7 +60,7 @@ class SkywayConnector extends EventEmitter {
       // todo: fi this.brPeerid is null throw error
       var skywayMsg = converter.to_skyway(cgofMsg, this.myPeerid, this.brPeerid);
       var strMsg = JSON.stringify(skywayMsg);
-      logger.debug("send - ", strMsg);
+      logger.debug("send - message to SkyWay server : " + strMsg);
 
       this.socket.send(strMsg);
     } catch(err) {

@@ -48,7 +48,7 @@ class Gateway {
   }
 
   start() {
-    logger.debug("hello", this.server_name); // just test
+    logger.debug("start establishing connection to : ", this.server_name); // just test
 
     this.connectToSignalingServer();
     this.connectToOrchestrator();
@@ -66,7 +66,6 @@ class Gateway {
     // todo: connect to redis-server and set orchestratorHandler
     this.orc_connector.connect();
     this.orc_connector.on("message", (data) => {
-      logger.debug("connectToOrchestrator - receive message", data);
       this.orchestratorHandler(data);
     });
   }

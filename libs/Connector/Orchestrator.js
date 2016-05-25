@@ -29,13 +29,11 @@ class OrchestratorConnector extends EventEmitter {
   mesgHandler(subscriber){
     subscriber.on("message", (channel, data) => {
       var parsed_data = JSON.parse(data);
-      logger.debug("mesgHandler (", this.channelname, ") - from", channel, "data = ", parsed_data);
       this.emit("message", parsed_data);
     });
   }
 
   send(mesg) {
-    logger.debug("send (" , this.channelname, ") - ", mesg);
     this.publisher.publish(this.channelname, JSON.stringify(mesg));
   }
 }

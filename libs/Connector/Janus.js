@@ -46,7 +46,7 @@ class JanusConnector extends EventEmitter{
       var janusMsg = converter.to_janus(cgofMsg);
       var self = this;
 
-      logger.debug("send - converted data from ", cgofMsg, "to", janusMsg);
+      logger.debug("send - request message to Janus", janusMsg);
 
 
       if(janusMsg.janus === "attach" ){
@@ -57,8 +57,6 @@ class JanusConnector extends EventEmitter{
         if(this.attach_id === null) return;
         var path = this.path + "/" + this.session_id + "/" + this.attach_id;
       }
-
-      logger.debug("send - path = ", path);
 
       var req = http.request(
         {
@@ -75,7 +73,7 @@ class JanusConnector extends EventEmitter{
           res.on('end', () => {
             try {
               var resp = JSON.parse(data);
-              logger.debug("send - response data from janus", resp);
+              logger.debug("send - receive response data from janus", resp);
 
               // if request is attach, set this.attach_id
               if(janusMsg.janus === "attach") {
@@ -161,7 +159,7 @@ class JanusConnector extends EventEmitter{
       return false;
     }
 
-    logger.debug("start long polling...");
+    logger.info("start long polling...");
 
     var self = this;
     var req = http.request(
@@ -176,7 +174,7 @@ class JanusConnector extends EventEmitter{
           res.setEncoding('utf8');
           res.on('data', function(chunk) { data += chunk;});
           res.on('end', function() {
-            logger.debug("receive message from LongPolling cycle - %s", data);
+            logger.debug("startLongPolling - receive message from Janus - %s", data);
             try {
               var janusMsg = JSON.parse(data);
               var cgofMsg = converter.to_cgof(janusMsg);

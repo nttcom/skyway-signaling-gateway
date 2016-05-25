@@ -40,7 +40,8 @@ var JanusConverter = {
         break;
       case "answer":
         _cgof_attrs.type = "ANSWER";
-        _cgof_attrs.message = janusMesg;
+        _cgof_attrs.message = {};
+        _cgof_attrs.message.sdp = janusMesg.jsep.sdp;
         break;
       default:
         logger.error("janus is event but jsep.type is neither offer or answer");
@@ -93,7 +94,7 @@ var JanusConverter = {
       _janus_attrs.body = {};
       _janus_attrs.body.request = "start";
       _janus_attrs.jsep = _.clone(cgofMesg.message);
-      _janus_attrs.jsep.type = "answer";
+      _janus_attrs.jsep.type = cgofMesg.type.toLowerCase();
       _janus_attrs.transaction = util.randomStringForJanus(12);
     } else if(cgofMesg.type === "CANDIDATE") {
       // case candidate
