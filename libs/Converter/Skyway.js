@@ -9,7 +9,7 @@ var util = require("../util")
 
 var SkywayConverter = {
   // convert mesg format from SkyWay to CGOF.
-  "connectionId": "mc_0123456789abcdef",  // fixme: connectionId should be determined by random function
+  "connectionId": null,  // fixme: connectionId should be determined by random function
   "to_cgof": function(skywayMesg) {
     var cgof = new CGOF();
 
@@ -18,6 +18,12 @@ var SkywayConverter = {
       "message"   : null,
       "action" : null
     };
+
+    // when messsage type is offer, store connectionId for answer
+    if(skywayMesg.type === "OFFER") {
+      logger.info("to_cgof - offer received from skyway, regist connectionId for answer ", skywayMesg.payload.connectionId);
+      this.connectionId = skywayMesg.payload.connectionId;
+    }
 
     switch(skywayMesg.type) {
     case "OFFER":
@@ -86,8 +92,14 @@ var SkywayConverter = {
       _skyway_attrs.type    = cgofMesg.type;
       _skyway_attrs.payload = {};
       _skyway_attrs.payload.sdp = {"sdp": _.clone(cgofMesg.message.sdp), "type" : cgofMesg.type.toLowerCase()};
-      _skyway_attrs.payload.connectionId = this.connectionId;
-      _skyway_attrs.payload.type = "media";  // fixme: type should be media or data based on sdp
+      if(cgofMesg.type === "ANSWER") {
+        _skyway_attrs.payload.connectionId = this.connectionId;
+        _skyway_attrs.payload.type = this.connectionId.indexOf("mc_") === 0 ? "media" : "data";
+      } else {
+        // case streaming
+        _skyway_attrs.payload.connectionId = "mc_" + util.randomStringForJanus(16);
+        _skyway_attrs.payload.type = "media";
+      }
       _skyway_attrs.payload.metadata = null;  // fixme: type should be media or data based on sdp
       break;
     case "CANDIDATE":
