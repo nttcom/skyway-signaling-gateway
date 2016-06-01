@@ -17,6 +17,7 @@
 var JanusConnector = require("./Connector/Janus.js")
   , SkywayConnector = require("./Connector/Skyway.js")
   , OrchestratorConnector = require("./Connector/Orchestrator.js")
+  , EventEmitter = require('events').EventEmitter
   , log4js = require("log4js")
 
 var logger = log4js.getLogger("Gateway")
@@ -29,26 +30,42 @@ var SrvConnectors = {
 ///////////////////////////
 // class definition
 
-class Gateway {
-  constructor(server_name, dst_servers /* string or Array of strings */) {
+class Gateway extends EventEmitter {
+  constructor(objParams /* {name: NAME, dstnames: [ DST_NAME ], connector : { "name": `skyway` or `janus`, "api_key": API_KEY } } */) {
+    super();
+
     // todo verify server_name
-    this.server_name = server_name;
-    if(typeof(dst_servers) === "string") {
-      this.dst_servers = [dst_servers];
+    this.name = objParams.name;
+    if(typeof(objParams.dstnames) === "string") {
+      this.dstnames = [objParams.dstnames];
     } else {
       // todo: this code assuming that dst_server must string or Array,
-      this.dst_servers = dst_servers;
+      this.dstnames = objParams.dstnames;
     }
 
-    this.srv_connector = new SrvConnectors[server_name]();
-    this.orc_connector = new OrchestratorConnector(server_name, this.dst_servers);
+    this.srv_connector = new SrvConnectors[objParams.connector.name](objParams.connector);
+    this.orc_connector = new OrchestratorConnector(this.name, this.dstnames);
+
+    this.srv_connector.on("open", (ev) => { this.emit("srv/open") });
+    this.srv_connector.on("error", (ev) => { /* ... */ });
+    this.srv_connector.on("close", (ev) => { this.emit("srv/close") });
+    this.orc_connector.on("open", (ev) => { this.emit("osc/open") });
+    this.orc_connector.on("error", (ev) => { /* ... */ });
+    this.orc_connector.on("close", (ev) => { this.emit("osc/close") });
   }
 
   init(){
   }
 
+  // inject message in behalf of server
+  inject(mesg) {
+    if( this.srv_connector.messageHandlerFromServer ) {
+      this.srv_connector.messageHandlerFromServer(mesg);
+    }
+  }
+
   start() {
-    logger.debug("start establishing connection to : ", this.server_name); // just test
+    logger.debug("start establishing connection to : ", this.name); // just test
 
     this.connectToSignalingServer();
     this.connectToOrchestrator();

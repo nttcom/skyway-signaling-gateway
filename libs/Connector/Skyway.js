@@ -15,18 +15,18 @@ var logger = log4js.getLogger("Connector/Skyway");
 // Connector/Skyway.js
 
 class SkywayConnector extends EventEmitter {
-  constructor(){
+  constructor(params){
     super();
     // configure static parameter
     this.scheme     = CONF.scheme     || "wss://";
     this.serverAddr = CONF.serverAddr || "skyway.io";
     this.serverPort = CONF.serverPort || 443;
     this.path       = CONF.path       || "/";
-    this.apikey    = CONF.apikey    || "********-****-****-****-************";
-    this.origin     = CONF.origin     || "http://example.com";
+    this.apikey    =  params.option && params.option.api_key  || CONF.apikey || "********-****-****-****-************";
+    this.origin     = params.option && params.option.origin   || CONF.origin || "http://example.com";
 
     // configure random parameters
-    this.myPeerid    = "SSG_"+util.randomIdForSkyway();
+    this.myPeerid    = params.option && params.option.peerid  || "SSG_"+util.randomIdForSkyway();
     this.token   = util.randomTokenForSkyway();
     this.brPeerid = null;
 
@@ -80,16 +80,19 @@ class SkywayConnector extends EventEmitter {
   setSocketHandler(){
     // connection established
     this.socket.on("open", () => {
+      this.emit("open");
       logger.info("connection established");
     });
 
     // unfortunately, error happened
     this.socket.on("error", (err) => {
+      this.emit("error", err);
       logger.error(err);
     });
 
     // connection closed
     this.socket.on("close", () => {
+      this.emit("close");
       logger.info("connection closed");
     });
 
@@ -101,9 +104,13 @@ class SkywayConnector extends EventEmitter {
     });
   }
 
-  messageHandlerFromServer(strMsg) {
+  messageHandlerFromServer(mesg) {
     try {
-      var skywayMsg = JSON.parse(strMsg);
+      if(typeof(mesg) === "string") {
+        var skywayMsg = JSON.parse(mesg);
+      } else {
+        var skywayMsg = mesg;
+      }
 
       if(!!skywayMsg.src) {
         this.brPeerid = skywayMsg.src;

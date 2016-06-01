@@ -35,6 +35,7 @@ class JanusConnector extends EventEmitter{
 
       // start LongPolling so that process handle server sent event message
       self.startLongPolling();
+      self.emit("open");
     });
   }
 
@@ -99,6 +100,7 @@ class JanusConnector extends EventEmitter{
 
       req.on('error', function(e) {
         logger.error("[JANUS]", 'error happened on request: ' + e.message);
+        self.emit("error", e);
       });
 
       req.write(JSON.stringify(janusMsg));
@@ -106,6 +108,7 @@ class JanusConnector extends EventEmitter{
 
     } catch(err) {
       logger.error(err);
+      self.emit("error", err);
     }
   }
 
@@ -135,9 +138,11 @@ class JanusConnector extends EventEmitter{
                 callback(resp.data);
               } else {
                 logger.error("error while createSession janus = %s, transactionId = %s, res_transaction = %s", resp.janus, transactionId, resp.transaction);
+                self.emit("error", new Error("failed to createSession"));
               }
             } catch(err) {
               logger.error(err);
+              self.emit("error", err);
             }
           })
         }
@@ -182,6 +187,7 @@ class JanusConnector extends EventEmitter{
               self.startLongPolling(); // loop
             } catch(e) {
               logger.error(e);
+              self.emit("error", e);
             }
           })
         }
@@ -192,6 +198,7 @@ class JanusConnector extends EventEmitter{
       self.retries++;
       if(self.retries > 3) {
         logger.error("Lost connection to Janus Gateway");
+        self.emit("close");
         return false;
       }
       self.startLongPolling();
