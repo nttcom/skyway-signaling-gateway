@@ -52,6 +52,10 @@ class SkywayConnector extends EventEmitter {
     this.setSocketHandler();
   }
 
+  setBrPeerid(peerid) {
+    this.brPeerid = peerid;
+  }
+
   send(cgofMsg) {
     // send message to Skyway server
 
@@ -99,6 +103,7 @@ class SkywayConnector extends EventEmitter {
     // when message received, it will be handled in messageHandler.
     this.socket.on("message", (strMsg)  => {
       logger.debug("setSocketHandler - message received from SkyWay server : " + strMsg);
+      this.emit("internal-message", JSON.parse(strMsg));
 
       this.messageHandlerFromServer(strMsg);
     });

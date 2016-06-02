@@ -64,6 +64,15 @@ class Gateway extends EventEmitter {
     }
   }
 
+
+  setBrPeerid(peerid) {
+    this.srv_connector.setBrPeerid(peerid);
+  }
+
+  getBrPeerid() {
+    return this.srv_connector.brPeerid;
+  }
+
   start() {
     logger.debug("start establishing connection to : ", this.name); // just test
 
