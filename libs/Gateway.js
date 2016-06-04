@@ -57,6 +57,10 @@ class Gateway extends EventEmitter {
   init(){
   }
 
+  setHook(type, func) {
+    this.srv_connector.setHook(type, func);
+  }
+
   // inject message in behalf of server
   inject(mesg) {
     if( this.srv_connector.messageHandlerFromServer ) {

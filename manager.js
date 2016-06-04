@@ -40,7 +40,7 @@ class Manager extends EventEmitter {
     this.streamJanus = null;
 
     this.setListener();
-    this.connect_data_ssg();
+    this.connect_dataSkyway();
   }
 
   setListener() {
@@ -73,26 +73,36 @@ class Manager extends EventEmitter {
     });
   }
 
-  connect_data_ssg() {
+  connect_dataSkyway() {
     this.dataSkyway = new Gateway({
       "name" : 'data-skyway',
       "dstnames" : ["data-janus"],
       "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": this.peerid } }
     }),
-    this.dataJanus = new Gateway({
-      "name":'data-janus',
-      "dstnames": ["data-skyway"],
-      "connector": { "name": "janus" }
-    });
-
+    this.dataSkyway.setHook( "OFFER", () => {
+      this.connect_dataJanus();
+    } );
     this.dataSkyway.start();  // todo : server_name should be obtained from command-line argument
-    this.dataJanus.start();  // todo : server_name should be obtained from command-line argument
 
     this.dataSkyway.on("srv/open", (ev) => {
       logger.info("connection for dataSkyway established");
-      this.dataAttach();
     });
   }
+
+  connect_dataJanus() {
+    if(!this.dataJanus) {
+      this.dataJanus = new Gateway({
+        "name":'data-janus',
+        "dstnames": ["data-skyway"],
+        "connector": { "name": "janus" }
+      });
+    }
+    // todo: destory former session
+    this.dataJanus.start();  // todo : server_name should be obtained from command-line argument
+
+    setTimeout((ev) => {this.dataAttach(); }, 100);
+  }
+
 
   dataAttach() {
     let transaction = util.randomStringForJanus(12);
@@ -106,16 +116,21 @@ class Manager extends EventEmitter {
   }
 
   connect_voice_ssg() {
-    this.voiceSkyway = new Gateway({
-      "name" : 'voice-skyway',
-      "dstnames" : ["voice-janus"],
-      "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": "AUDIO_" + this.peerid } }
-    }),
-    this.voiceJanus = new Gateway({
-      "name":'voice-janus',
-      "dstnames": ["voice-skyway"],
-      "connector": { "name": "janus" }
-    });
+    if(!this.voiceSkyway) {
+      this.voiceSkyway = new Gateway({
+        "name" : 'voice-skyway',
+        "dstnames" : ["voice-janus"],
+        "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": "AUDIO_" + this.peerid } }
+      })
+    }
+    if(!this.voiceJanus) {
+      this.voiceJanus = new Gateway({
+        "name":'voice-janus',
+        "dstnames": ["voice-skyway"],
+        "connector": { "name": "janus" }
+      });
+    }
+    // todo: destory former session
 
     this.voiceSkyway.start();  // todo : server_name should be obtained from command-line argument
     this.voiceJanus.start();  // todo : server_name should be obtained from command-line argument
@@ -141,16 +156,21 @@ class Manager extends EventEmitter {
 
 
   connect_stream_ssg(brPeerid) {
-    this.streamSkyway = new Gateway({
-      "name" : 'stream-skyway',
-      "dstnames" : ["stream-janus"],
-      "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": "STREAM_" + this.peerid } }
-    }),
-    this.streamJanus = new Gateway({
-      "name":'stream-janus',
-      "dstnames": ["stream-skyway"],
-      "connector": { "name": "janus" }
-    });
+    if(!this.streamSkyway) {
+      this.streamSkyway = new Gateway({
+        "name" : 'stream-skyway',
+        "dstnames" : ["stream-janus"],
+        "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": "STREAM_" + this.peerid } }
+      })
+    };
+    if(!this.streamJanus) {
+      this.streamJanus = new Gateway({
+        "name":'stream-janus',
+        "dstnames": ["stream-skyway"],
+        "connector": { "name": "janus" }
+      });
+    }
+    // todo: destory former session
 
     this.streamSkyway.setBrPeerid(brPeerid);
 

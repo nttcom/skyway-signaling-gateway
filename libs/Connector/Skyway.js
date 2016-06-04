@@ -30,6 +30,10 @@ class SkywayConnector extends EventEmitter {
     this.token   = util.randomTokenForSkyway();
     this.brPeerid = null;
 
+    this.hook = {};
+    this.stack = [];
+    this.is_wait = false;
+
     // setup url for SkyWay server
     this.serverUrl = [
       this.scheme,
@@ -56,6 +60,10 @@ class SkywayConnector extends EventEmitter {
     this.brPeerid = peerid;
   }
 
+  setHook(type, func) {
+    this.hook[type] = func;
+  }
+
   send(cgofMsg) {
     // send message to Skyway server
 
@@ -63,10 +71,15 @@ class SkywayConnector extends EventEmitter {
     try {
       // todo: fi this.brPeerid is null throw error
       var skywayMsg = converter.to_skyway(cgofMsg, this.myPeerid, this.brPeerid);
-      var strMsg = JSON.stringify(skywayMsg);
-      logger.debug("send - message to SkyWay server : " + strMsg);
 
-      this.socket.send(strMsg);
+      if(skywayMsg.type === "X_JANUS") {
+        logger.debug("send - discard to send : " + strMsg);
+      } else {
+        var strMsg = JSON.stringify(skywayMsg);
+        logger.debug("send - message to SkyWay server : " + strMsg);
+
+        this.socket.send(strMsg);
+      }
     } catch(err) {
       logger.error(err);
     }
@@ -102,15 +115,38 @@ class SkywayConnector extends EventEmitter {
 
     // when message received, it will be handled in messageHandler.
     this.socket.on("message", (strMsg)  => {
-      logger.debug("setSocketHandler - message received from SkyWay server : " + strMsg);
       this.emit("internal-message", JSON.parse(strMsg));
 
-      this.messageHandlerFromServer(strMsg);
+      if(this.is_wait) {
+        this.stack.push(strMsg);
+        return;
+      }
+
+      try {
+        let mesg = JSON.parse(strMsg);
+        if(this.hook[mesg.type]) {
+          logger.debug("hook found!!");
+          this.is_wait = true;
+          this.stack.push(strMsg);
+          this.hook[mesg.type]();
+          setTimeout((ev) => {
+            this.stack.forEach((msg) => { this.messageHandlerFromServer(msg); });
+            this.stack.length = 0;
+            this.is_wait = false;
+          }, 1500);
+        } else {
+          this.messageHandlerFromServer(strMsg);
+        }
+      } catch(err) {
+        logger.warn(err);
+      }
     });
   }
 
   messageHandlerFromServer(mesg) {
     try {
+      logger.debug("messageHandlerFromServer -  : %s", mesg);
+
       if(typeof(mesg) === "string") {
         var skywayMsg = JSON.parse(mesg);
       } else {
