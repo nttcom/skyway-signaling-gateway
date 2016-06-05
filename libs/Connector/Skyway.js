@@ -73,10 +73,10 @@ class SkywayConnector extends EventEmitter {
       var skywayMsg = converter.to_skyway(cgofMsg, this.myPeerid, this.brPeerid);
 
       if(skywayMsg.type === "X_JANUS") {
-        logger.debug("send - discard to send : " + strMsg);
+        // logger.debug("send - discard to send : " + strMsg);
       } else {
         var strMsg = JSON.stringify(skywayMsg);
-        logger.debug("send - message to SkyWay server : " + strMsg);
+        // logger.debug("send - message to SkyWay server : " + strMsg);
 
         this.socket.send(strMsg);
       }

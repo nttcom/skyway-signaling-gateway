@@ -42,19 +42,28 @@ class Gateway extends EventEmitter {
       // todo: this code assuming that dst_server must string or Array,
       this.dstnames = objParams.dstnames;
     }
-
     this.srv_connector = new SrvConnectors[objParams.connector.name](objParams.connector);
     this.orc_connector = new OrchestratorConnector(this.name, this.dstnames);
 
-    this.srv_connector.on("open", (ev) => { this.emit("srv/open") });
-    this.srv_connector.on("error", (ev) => { /* ... */ });
-    this.srv_connector.on("close", (ev) => { this.emit("srv/close") });
-    this.orc_connector.on("open", (ev) => { this.emit("osc/open") });
-    this.orc_connector.on("error", (ev) => { /* ... */ });
-    this.orc_connector.on("close", (ev) => { this.emit("osc/close") });
+    this.init();
   }
 
   init(){
+    this.srv_connector.on("open", (ev) => { this.emit("srv/open") });
+    this.srv_connector.on("error", (ev) => { /* ... */ });
+    this.srv_connector.on("close", (ev) => { this.emit("srv/close") });
+    this.srv_connector.on("message", (data) => {
+      this.serverHandler(data);
+    });
+
+    this.orc_connector.on("open", (ev) => { this.emit("osc/open") });
+    this.orc_connector.on("error", (ev) => { /* ... */ });
+    this.orc_connector.on("close", (ev) => { this.emit("osc/close") });
+    this.orc_connector.on("message", (data) => {
+      this.orchestratorHandler(data);
+    });
+
+    this.connectToOrchestrator();
   }
 
   setHook(type, func) {
@@ -81,24 +90,19 @@ class Gateway extends EventEmitter {
     logger.debug("start establishing connection to : ", this.name); // just test
 
     this.connectToSignalingServer();
-    this.connectToOrchestrator();
+
+    // fixme : connection over time
   }
 
   connectToSignalingServer(){
     // connect to each signaling server and set the handler when message is received
     this.srv_connector.connect();
-    this.srv_connector.on("message", (data) => {
-      this.serverHandler(data);
-    });
   }
 
   connectToOrchestrator(){
     // todo: connect to redis-server and set orchestratorHandler
     this.orc_connector.connect();
-    this.orc_connector.on("message", (data) => {
-      this.orchestratorHandler(data);
-    });
-  }
+ }
 
 
 
@@ -125,10 +129,12 @@ class Gateway extends EventEmitter {
 
   postToOrchestrator(mesg) {
     // add src and dest for gateway module
+    if(mesg.type === "ANSWER") logger.debug("postToOrchestrator - ", mesg);
     this.orc_connector.send(mesg);
   }
 
   postToServer(mesg) {
+    if(mesg.type === "ANSWER")  logger.debug("postToServer - ", mesg);
     this.srv_connector.send(mesg);
   }
 }

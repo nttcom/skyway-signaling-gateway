@@ -9,14 +9,6 @@ var EventEmitter = require('events').EventEmitter
 
 var logger = log4js.getLogger("Manager")
 
-// var skyway_gateway = new Gateway('skyway', ["janus"])
-//   , janus_gateway = new Gateway('janus', ["skyway"])
-//
-//
-// skyway_gateway.start();  // todo : server_name should be obtained from command-line argument
-// janus_gateway.start();  // todo : server_name should be obtained from command-line argument
-
-
 
 // todo: it should be configurable
 const JANUS_PORT = 15000
@@ -91,6 +83,10 @@ class Manager extends EventEmitter {
 
   connect_dataJanus() {
     if(!this.dataJanus) {
+      logger.debug("*******************************************************");
+      logger.debug("** create dataJanus *");
+      logger.debug(this.dataJanus);
+      logger.debug("*******************************************************");
       this.dataJanus = new Gateway({
         "name":'data-janus',
         "dstnames": ["data-skyway"],
@@ -122,6 +118,7 @@ class Manager extends EventEmitter {
         "dstnames" : ["voice-janus"],
         "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": "AUDIO_" + this.peerid } }
       })
+      this.voiceSkyway.start();  // todo : server_name should be obtained from command-line argument
     }
     if(!this.voiceJanus) {
       this.voiceJanus = new Gateway({
@@ -132,13 +129,13 @@ class Manager extends EventEmitter {
     }
     // todo: destory former session
 
-    this.voiceSkyway.start();  // todo : server_name should be obtained from command-line argument
     this.voiceJanus.start();  // todo : server_name should be obtained from command-line argument
 
-    this.voiceSkyway.on("srv/open", (ev) => {
+    // todo: execute after some event
+    setTimeout( (ev) => {
       logger.info("connection for voiceSkyway established");
       this.voiceAttach();
-    });
+    }, 500);
   }
 
   voiceAttach() {
@@ -162,6 +159,7 @@ class Manager extends EventEmitter {
         "dstnames" : ["stream-janus"],
         "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": "STREAM_" + this.peerid } }
       })
+      this.streamSkyway.start();  // todo : server_name should be obtained from command-line argument
     };
     if(!this.streamJanus) {
       this.streamJanus = new Gateway({
@@ -170,17 +168,17 @@ class Manager extends EventEmitter {
         "connector": { "name": "janus" }
       });
     }
-    // todo: destory former session
 
     this.streamSkyway.setBrPeerid(brPeerid);
 
-    this.streamSkyway.start();  // todo : server_name should be obtained from command-line argument
+    // todo: destory former session
     this.streamJanus.start();  // todo : server_name should be obtained from command-line argument
 
-    this.streamSkyway.on("srv/open", (ev) => {
+    // todo: execute after some event
+    setTimeout( (ev) => {
       logger.info("connection for streamSkyway established");
       this.streamAttach();
-    });
+    }, 500);
   }
 
   streamAttach() {
