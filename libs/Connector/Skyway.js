@@ -32,6 +32,7 @@ class SkywayConnector extends EventEmitter {
 
     this.hook = {};
     this.stack = [];
+    this.stack_candidate = [];
     this.is_wait = false;
 
     // setup url for SkyWay server
@@ -117,13 +118,18 @@ class SkywayConnector extends EventEmitter {
     this.socket.on("message", (strMsg)  => {
       this.emit("internal-message", JSON.parse(strMsg));
 
-      if(this.is_wait) {
-        this.stack.push(strMsg);
-        return;
-      }
-
       try {
         let mesg = JSON.parse(strMsg);
+        if(Object.keys(this.hook).length > 0) {
+          if(this.is_wait) {
+            this.stack.push(strMsg);
+            return;
+          } else if (mesg.type === "CANDIDATE") {
+            this.stack_candidate.push(strMsg);
+            return;
+          }
+        }
+
         if(this.hook[mesg.type]) {
           logger.debug("hook found!!");
           this.is_wait = true;
@@ -131,7 +137,9 @@ class SkywayConnector extends EventEmitter {
           this.hook[mesg.type]();
           setTimeout((ev) => {
             this.stack.forEach((msg) => { this.messageHandlerFromServer(msg); });
+            this.stack_candidate.forEach((msg) => { this.messageHandlerFromServer(msg); });
             this.stack.length = 0;
+            this.stack_candidate.length = 0;
             this.is_wait = false;
           }, 1500);
         } else {
