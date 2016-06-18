@@ -1,6 +1,6 @@
 {
   "name": "signaling_gateway",
-  "version": "0.0.2",
+  "version": "0.3",
   "description": "A bridging gateway module for WebRTC signaling servers",
   "repository": {
     "type": "git",
