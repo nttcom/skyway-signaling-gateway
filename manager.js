@@ -4,15 +4,16 @@
 var EventEmitter = require('events').EventEmitter
   , log4js = require("log4js")
   , dgram = require('dgram')
-  , Gateway = require('./libs/Gateway.js')
+  , Gateway = require('./libs/Gateway')
   , util = require("./libs/util")
+  , intTcp = require("./libs/Interface/Tcp")
 
 var logger = log4js.getLogger("Manager")
 
-
 // todo: it should be configurable
-const JANUS_PORT = 15000
+const JANUS_PORT = 15000  // udp
   , JANUS_ADDR   = '127.0.0.1'
+  , TCP_PORT     = 15000 // tcp
   , API_KEY      = "db07bbb6-4ee8-4eb7-b0c2-b8b2e5c69ef9"
   , ORIGIN       = "http://localhost"
 
@@ -58,8 +59,12 @@ class Manager extends EventEmitter {
       case "SSG:voice/stop":
         break;
       default:
-        // todo: send external tcp interface
-        logger.info("not control packet for SSG: %s", mesg);
+        logger.debug("not matched : %s", mesg);
+        if(mesg.indexOf("SSG:") !== 0) {
+          logger.info("not control packet for SSG: %s", mesg);
+
+          this.emit("jConnector/message", mesg);
+        }
         break;
       }
     });
@@ -214,7 +219,11 @@ class Manager extends EventEmitter {
   }
 }
 
+///////////////////////////////////////////////
+// main
+
 let manager = new Manager();
+let int_tcp = new intTcp(manager, TCP_PORT);
 
 let timer = setInterval((ev) => {
   manager.send_jConnector("hello " + Date.now() );
