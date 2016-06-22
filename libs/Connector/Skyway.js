@@ -48,13 +48,13 @@ class SkywayConnector extends EventEmitter {
     ].join("");
   }
 
-  connect(Stub, callback){
+  connect(callback, Stub){
     // start websocket connection with Skyway SV
     this.socket = !Stub ?  new WebSocket(this.serverUrl, {"origin": this.origin}) : new Stub(callback);
 
     logger.info("start establishing connection to server");
 
-    this.setSocketHandler();
+    this.setSocketHandler({onopen: callback});
   }
 
   setBrPeerid(peerid) {
@@ -95,11 +95,15 @@ class SkywayConnector extends EventEmitter {
     }
   }
 
-  setSocketHandler(){
+  setSocketHandler(params){
     // connection established
     this.socket.on("open", () => {
       this.emit("open");
       logger.info("connection established");
+
+      if(params.onopen && typeof(params.onopen === "function")) {
+        params.onopen();
+      };
     });
 
     // unfortunately, error happened

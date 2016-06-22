@@ -36,6 +36,10 @@ class JanusConnector extends EventEmitter{
       // start LongPolling so that process handle server sent event message
       self.startLongPolling();
       self.emit("open");
+      logger.debug(typeof(callback));
+      if( typeof(callback) === "function" ) {
+        callback();
+      }
     });
   }
 

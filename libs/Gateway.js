@@ -89,14 +89,18 @@ class Gateway extends EventEmitter {
   start() {
     logger.debug("start establishing connection to : ", this.name); // just test
 
-    this.connectToSignalingServer();
-
-    // fixme : connection over time
+    return new Promise((resolve, reject) => {
+      try {
+        this.connectToSignalingServer(resolve);
+      } catch(err) {
+        reject(Error(err));
+      }
+    });
   }
 
-  connectToSignalingServer(){
+  connectToSignalingServer(callback){
     // connect to each signaling server and set the handler when message is received
-    this.srv_connector.connect();
+    this.srv_connector.connect(callback);
   }
 
   connectToOrchestrator(){

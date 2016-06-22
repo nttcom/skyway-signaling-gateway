@@ -79,11 +79,11 @@ class Manager extends EventEmitter {
     this.dataSkyway.setHook( "OFFER", () => {
       this.connect_dataJanus();
     } );
-    this.dataSkyway.start();  // todo : server_name should be obtained from command-line argument
-
-    this.dataSkyway.on("srv/open", (ev) => {
+    this.dataSkyway.start().then(() => {
       logger.info("connection for dataSkyway established");
-    });
+    }).catch((err) => {
+      logger.warn(err);
+    })
   }
 
   connect_dataJanus() {
@@ -98,10 +98,13 @@ class Manager extends EventEmitter {
         "connector": { "name": "janus" }
       });
     }
-    // todo: destory former session
-    this.dataJanus.start();  // todo : server_name should be obtained from command-line argument
-
-    setTimeout((ev) => {this.dataAttach(); }, 100);
+    // todo: destory previous session
+    this.dataJanus.start().then(() => {
+      logger.info("dataJanus started");
+      this.dataAttach();
+    }).catch((err) => {
+      logger.warn(err);
+    });
   }
 
 
@@ -225,6 +228,7 @@ class Manager extends EventEmitter {
 let manager = new Manager();
 let int_tcp = new intTcp(manager, TCP_PORT);
 
+// test code to send arbitral message via datachannel from SSG to client.
 let timer = setInterval((ev) => {
   manager.send_jConnector("hello " + Date.now() );
 }, 10000);
