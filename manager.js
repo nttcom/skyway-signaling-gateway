@@ -59,7 +59,6 @@ class Manager extends EventEmitter {
       case "SSG:voice/stop":
         break;
       default:
-        logger.debug("not matched : %s", mesg);
         if(mesg.indexOf("SSG:") !== 0) {
           logger.info("not control packet for SSG: %s", mesg);
 
@@ -76,9 +75,8 @@ class Manager extends EventEmitter {
       "dstnames" : ["data-janus"],
       "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": this.peerid } }
     }),
-    this.dataSkyway.setHook( "OFFER", () => {
-      this.connect_dataJanus();
-    } );
+    this.dataSkyway.setHook( "OFFER", this.connect_dataJanus.bind(this));
+
     this.dataSkyway.start().then(() => {
       logger.info("connection for dataSkyway established");
     }).catch((err) => {
@@ -87,119 +85,131 @@ class Manager extends EventEmitter {
   }
 
   connect_dataJanus() {
-    if(!this.dataJanus) {
-      logger.debug("*******************************************************");
-      logger.debug("** create dataJanus *");
-      logger.debug(this.dataJanus);
-      logger.debug("*******************************************************");
-      this.dataJanus = new Gateway({
-        "name":'data-janus',
-        "dstnames": ["data-skyway"],
-        "connector": { "name": "janus" }
+    return new Promise((resolv, error) => {
+      if(!this.dataJanus) {
+        this.dataJanus = new Gateway({
+          "name":'data-janus',
+          "dstnames": ["data-skyway"],
+          "connector": { "name": "janus" }
+        });
+      }
+      // todo: destory previous session
+      this.dataJanus.start().then(() => {
+        logger.info("dataJanus started");
+        this.dataAttach(resolv, error);
+      }).catch((err) => {
+        logger.warn(err);
+        error(err);
       });
-    }
-    // todo: destory previous session
-    this.dataJanus.start().then(() => {
-      logger.info("dataJanus started");
-      this.dataAttach();
-    }).catch((err) => {
-      logger.warn(err);
     });
   }
 
 
-  dataAttach() {
+  dataAttach(resolv, error) {
     let transaction = util.randomStringForJanus(12);
-    this.dataSkyway.inject({"type": "X_JANUS", "payload": {"janus": "attach", "plugin": "janus.plugin.skywayiot", "transaction": transaction}});
-    logger.info("dataSkyway attached janus.plugin.skywayiot");
-    setTimeout((ev) => {
-      let transaction = util.randomStringForJanus(12);
-      this.dataSkyway.inject({"type": "X_JANUS", "payload": {"janus": "message", "body": {"audio": false, "video": false}, "transaction": transaction}});
-      logger.info("dataSkyway message sent janus.plugin.skywayiot");
-    }, 500);
+    this.dataSkyway.inject( {"type": "X_JANUS", "payload": {"janus": "attach", "plugin": "janus.plugin.skywayiot", "transaction": transaction}})
+      .then((data) => {
+        logger.info("dataSkyway attached janus.plugin.skywayiot");
+        transaction = util.randomStringForJanus(12);
+        return this.dataSkyway.inject({"type": "X_JANUS", "payload": {"janus": "message", "body": {"audio": false, "video": false}, "transaction": transaction}});
+      }).then((data) => {
+        logger.info("dataSkyway message sent janus.plugin.skywayiot");
+        resolv(data);
+      }).catch((err) => {
+        logger.warn(err);
+        error(err);
+      });
   }
 
   connect_voice_ssg() {
-    if(!this.voiceSkyway) {
+    // fixme: it does not cover all patterns.
+    if(!this.voiceSkyway && !this.voiceJanus) {
       this.voiceSkyway = new Gateway({
         "name" : 'voice-skyway',
         "dstnames" : ["voice-janus"],
         "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": "AUDIO_" + this.peerid } }
       })
-      this.voiceSkyway.start();  // todo : server_name should be obtained from command-line argument
-    }
-    if(!this.voiceJanus) {
-      this.voiceJanus = new Gateway({
-        "name":'voice-janus',
-        "dstnames": ["voice-skyway"],
-        "connector": { "name": "janus" }
+      this.voiceSkyway.start().then(() => {
+        logger.info("connection for voiceSkyway established");
+        this.voiceJanus = new Gateway({
+          "name":'voice-janus',
+          "dstnames": ["voice-skyway"],
+          "connector": { "name": "janus" }
+        });
+        return this.voiceJanus.start();
+      }).then((data) => {
+        logger.info("connection for voiceJanus established");
+        this.voiceAttach();
+      });
+    } else {
+      this.voiceJanus.start().then((data) => {
+        logger.info("connection for voiceSkyway and voiceJanus already established");
+        this.voiceAttach();
       });
     }
-    // todo: destory former session
-
-    this.voiceJanus.start();  // todo : server_name should be obtained from command-line argument
-
-    // todo: execute after some event
-    setTimeout( (ev) => {
-      logger.info("connection for voiceSkyway established");
-      this.voiceAttach();
-    }, 500);
   }
 
   voiceAttach() {
-    let transaction = util.randomStringForJanus(12);
-    this.voiceSkyway.inject({"type": "X_JANUS", "payload": {"janus": "attach", "plugin": "janus.plugin.skywayiot", "transaction": transaction}});
-    logger.info("voiceSkyway attached janus.plugin.skywayiot");
-    setTimeout((ev) => {
-      let transaction = util.randomStringForJanus(12);
-      this.voiceSkyway.inject({"type": "X_JANUS", "payload": {"janus": "message", "body": {"audio": true, "video": false}, "transaction": transaction}});
-      logger.info("voiceSkyway message sent janus.plugin.skywayiot");
-      this.send_jConnector("SSG:voice/started");
-    }, 500);
+    const transaction = util.randomStringForJanus(12);
+    logger.info("try to attach janus.plugin.skywayiot by voiceSkyway %s", transaction);
+
+    this.voiceSkyway.inject({"type": "X_JANUS", "payload": {"janus": "attach", "plugin": "janus.plugin.skywayiot", "transaction": transaction}})
+      .then((data) => {
+        logger.info("voiceSkyway attached janus.plugin.skywayiot");
+        const transaction = util.randomStringForJanus(12);
+        return this.voiceSkyway.inject({"type": "X_JANUS", "payload": {"janus": "message", "body": {"audio": true, "video": false}, "transaction": transaction}});
+      }).then((data) => {
+        logger.info("voiceSkyway message sent janus.plugin.skywayiot");
+        this.send_jConnector("SSG:voice/started");
+      }).catch((err) => {
+        logger.warn(err);
+      });
   }
 
 
 
   connect_stream_ssg(brPeerid) {
-    if(!this.streamSkyway) {
+    if(!this.streamSkyway && !this.streamJanus) {
       this.streamSkyway = new Gateway({
         "name" : 'stream-skyway',
         "dstnames" : ["stream-janus"],
         "connector" : { "name": "skyway", "option": { "api_key" : API_KEY, "origin": ORIGIN, "peerid": "STREAM_" + this.peerid } }
       })
-      this.streamSkyway.start();  // todo : server_name should be obtained from command-line argument
-    };
-    if(!this.streamJanus) {
-      this.streamJanus = new Gateway({
-        "name":'stream-janus',
-        "dstnames": ["stream-skyway"],
-        "connector": { "name": "janus" }
+      this.streamSkyway.start()
+        .then(() => {
+          this.streamSkyway.setBrPeerid(brPeerid);
+
+          this.streamJanus = new Gateway({
+            "name":'stream-janus',
+            "dstnames": ["stream-skyway"],
+            "connector": { "name": "janus" }
+          });
+          return this.streamJanus.start();
+        }).then(() => {
+          logger.info("connection for streamSkyway established");
+          this.streamAttach();
+        });
+    } else {
+      this.streamSkyway.setBrPeerid(brPeerid);
+
+      this.streamJanus.start().then(() => {
+        logger.info("connection for streamSkyway established");
+        this.streamAttach();
       });
     }
-
-    this.streamSkyway.setBrPeerid(brPeerid);
-
-    // todo: destory former session
-    this.streamJanus.start();  // todo : server_name should be obtained from command-line argument
-
-    // todo: execute after some event
-    setTimeout( (ev) => {
-      logger.info("connection for streamSkyway established");
-      this.streamAttach();
-    }, 500);
   }
 
   streamAttach() {
     let transaction = util.randomStringForJanus(12);
-    this.streamSkyway.inject({"type": "X_JANUS", "payload": {"janus": "attach", "plugin": "janus.plugin.streaming", "transaction": transaction}});
-    logger.info("dataSkyway attached janus.plugin.skywayiot");
-    setTimeout((ev) => {
-      let transaction = util.randomStringForJanus(12);
-      this.streamSkyway.inject({"type": "X_JANUS", "payload": {"janus": "message", "body": {"request": "watch", "id": 1}, "transaction": transaction}});
-      logger.info("dataSkyway message sent janus.plugin.skywayiot");
-
-      this.send_jConnector("SSG:stream/started");
-    }, 500);
+    this.streamSkyway.inject({"type": "X_JANUS", "payload": {"janus": "attach", "plugin": "janus.plugin.streaming", "transaction": transaction}})
+      .then((data) => {
+        logger.info("dataSkyway attached janus.plugin.skywayiot");
+        let transaction = util.randomStringForJanus(12);
+        return this.streamSkyway.inject({"type": "X_JANUS", "payload": {"janus": "message", "body": {"request": "watch", "id": 1}, "transaction": transaction}});
+      }).then((data) => {
+        logger.info("dataSkyway message sent janus.plugin.skywayiot");
+        this.send_jConnector("SSG:stream/started");
+      });
   }
 
   disconnect_stream_ssg() {

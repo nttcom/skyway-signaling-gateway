@@ -42,8 +42,10 @@ class Gateway extends EventEmitter {
       // todo: this code assuming that dst_server must string or Array,
       this.dstnames = objParams.dstnames;
     }
+    this.source_name = objParams.connector.name.toUpperCase();
     this.srv_connector = new SrvConnectors[objParams.connector.name](objParams.connector);
     this.orc_connector = new OrchestratorConnector(this.name, this.dstnames);
+    this.transactions = {};
 
     this.init();
   }
@@ -54,13 +56,36 @@ class Gateway extends EventEmitter {
     this.srv_connector.on("close", (ev) => { this.emit("srv/close") });
     this.srv_connector.on("message", (data) => {
       this.serverHandler(data);
+
+      // if(data.source === this.source_name) return;
     });
+
 
     this.orc_connector.on("open", (ev) => { this.emit("osc/open") });
     this.orc_connector.on("error", (ev) => { /* ... */ });
     this.orc_connector.on("close", (ev) => { this.emit("osc/close") });
     this.orc_connector.on("message", (data) => {
       this.orchestratorHandler(data);
+
+      const transaction = data.message && data.message.transaction;
+
+
+      if(transaction && this.transactions[transaction]) {
+        logger.debug("found transaction object for %s", transaction);
+
+        // call resolv
+        // todo: check message, then call error() if it includes error message
+        this.transactions[transaction].resolv(data.message);
+
+        // clear timeout
+        clearTimeout(this.transactions[transaction].timer);
+
+        // delete this transaction object
+        delete this.transactions[transaction];
+      } else {
+        logger.warn("invalid message for %s", transaction);
+      }
+
     });
 
     this.connectToOrchestrator();
@@ -71,10 +96,32 @@ class Gateway extends EventEmitter {
   }
 
   // inject message in behalf of server
+  //
+  // when response received for specific transaction, Promise resole will execute
   inject(mesg) {
-    if( this.srv_connector.messageHandlerFromServer ) {
-      this.srv_connector.messageHandlerFromServer(mesg);
-    }
+    // set Promise
+    return new Promise((resolv, error) => {
+      let transaction = mesg.payload.transaction;
+
+      // set TIMEOUT timer (30sec)
+      // when TIMEOUT observed, transaction object for it will be deleted.
+      let timer = setTimeout((ev) => {
+        logger.warn("timeout happen for %s", transaction);
+        error(Error("timeout happen for " + transaction));
+        delete this.transactions[transaction];
+      }, 30000)
+
+      this.transactions[transaction] = {"resolv": resolv, "error": error, "timer": timer};
+      logger.debug("transaction object stored to %s", transaction);
+
+      // inject message
+      if( this.srv_connector.messageHandlerFromServer ) {
+        logger.debug("try to send message ", mesg);
+        this.srv_connector.messageHandlerFromServer(mesg);
+      }
+
+
+    });
   }
 
 
@@ -87,10 +134,11 @@ class Gateway extends EventEmitter {
   }
 
   start() {
-    logger.debug("start establishing connection to : ", this.name); // just test
+    logger.debug("start establishing connection to : ", this.name);
 
     return new Promise((resolve, reject) => {
       try {
+        logger.debug("In promise, connectToSignalingServer()");
         this.connectToSignalingServer(resolve);
       } catch(err) {
         reject(Error(err));
@@ -100,6 +148,7 @@ class Gateway extends EventEmitter {
 
   connectToSignalingServer(callback){
     // connect to each signaling server and set the handler when message is received
+    logger.debug("srv_connector.connect()");
     this.srv_connector.connect(callback);
   }
 
