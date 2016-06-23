@@ -34,6 +34,8 @@ class SkywayConnector extends EventEmitter {
     this.stack = [];
     this.stack_candidate = [];
     this.is_wait = false;
+    this.is_ice_negotiating = false;
+    this.callbacks = {};
 
     // setup url for SkyWay server
     this.serverUrl = [
@@ -48,12 +50,13 @@ class SkywayConnector extends EventEmitter {
     ].join("");
   }
 
-  connect(Stub, callback){
+  connect(callback, Stub){
     // start websocket connection with Skyway SV
     this.socket = !Stub ?  new WebSocket(this.serverUrl, {"origin": this.origin}) : new Stub(callback);
 
     logger.info("start establishing connection to server");
 
+    this.callbacks.onopen = callback;
     this.setSocketHandler();
   }
 
@@ -100,6 +103,7 @@ class SkywayConnector extends EventEmitter {
     this.socket.on("open", () => {
       this.emit("open");
       logger.info("connection established");
+
     });
 
     // unfortunately, error happened
@@ -124,7 +128,7 @@ class SkywayConnector extends EventEmitter {
           if(this.is_wait) {
             this.stack.push(strMsg);
             return;
-          } else if (mesg.type === "CANDIDATE") {
+          } else if (mesg.type === "CANDIDATE" && !this.is_ice_negotiating) {
             this.stack_candidate.push(strMsg);
             return;
           }
@@ -134,14 +138,25 @@ class SkywayConnector extends EventEmitter {
           logger.debug("hook found!!");
           this.is_wait = true;
           this.stack.push(strMsg);
-          this.hook[mesg.type]();
-          setTimeout((ev) => {
+          this.hook[mesg.type]().then(() => {
+            // this resolv will be called after attached to janus plugin.
+            logger.debug("start transferring offer/candidate messages");
+            this.is_ice_negotiating = true;
+            this.is_wait = false;
+
+            // transfer all stacked data (offer and candidates) to Janus
             this.stack.forEach((msg) => { this.messageHandlerFromServer(msg); });
             this.stack_candidate.forEach((msg) => { this.messageHandlerFromServer(msg); });
             this.stack.length = 0;
             this.stack_candidate.length = 0;
-            this.is_wait = false;
-          }, 1500);
+
+            // to prevent stacking ice candidate after offer is sent for a while (5sec)
+            setTimeout((ev) => {
+              this.is_ice_negotiating = false;
+            }, 5000);
+          }).catch((err) => {
+            logger.warn(err);
+          });
         } else {
           this.messageHandlerFromServer(strMsg);
         }
@@ -161,6 +176,15 @@ class SkywayConnector extends EventEmitter {
         var skywayMsg = mesg;
       }
 
+      // if message type equal "OPEN", call onopen callback then return
+      if(skywayMsg.type === "OPEN") {
+        if(this.callbacks.onopen && typeof(this.callbacks.onopen === "function")) {
+          this.callbacks.onopen();
+        };
+        return;
+      }
+
+      // if message type is not "OPEN", convert it as cgof message then proceed as follows
       if(!!skywayMsg.src) {
         this.brPeerid = skywayMsg.src;
       }
