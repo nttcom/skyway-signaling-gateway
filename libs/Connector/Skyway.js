@@ -143,10 +143,11 @@ class SkywayConnector extends EventEmitter {
           // receive OFFER from skyway
           this.emitEvent(mesg)
           let offer = mesg.payload.sdp
+          let type = mesg.payload.type
           this.connections[id] = Object.assign({}, this.connections[id], {
-            src, dst, offer
+            src, dst, offer, type
           });
-          this.emit('receive/offer', id, offer)
+          this.emit('receive/offer', id, offer, type)
           break;
         case 'ANSWER':
           // receive ANSWER from skyway

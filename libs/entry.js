@@ -28,9 +28,9 @@ if(true) {
   }
 
   // skyway.on("event", (type, mesg) => console.log(`${type}`))
-  skyway.on("receive/offer", (id, offer) => {
+  skyway.on("receive/offer", (id, offer, type) => {
     let state = states[id] || {candidates: []}
-    states[id] = Object.assign({}, state, {offer})
+    states[id] = Object.assign({}, state, {offer, type})
     store.dispatch(requestCreateId(id))
   })
 
@@ -42,6 +42,7 @@ if(true) {
 
   skyway.on("receive/candidate", (id, candidate) => {
     let state = states[id] || {candidates: []}
+    // fixme after LONGPOLLING_ANSWER, candidate should not be stored
     states[id] = Object.assign({}, state, {candidates: [ ...state.candidates, candidate]})
   })
 
@@ -53,20 +54,22 @@ if(true) {
     $("#state pre").text(JSON.stringify(store.getState(), 2, " "))
     for( let id in sessions ) {
       let session = sessions[id]
+      let is_media = states[id].type === "media"
       switch(session.status) {
         case RESPONSE_CREATE_ID:
           store.dispatch(requestAttach(id, "janus.plugin.echotest"))
           break;
         case RESPONSE_ATTACH:
-          store.dispatch(requestMediatype(id, {video: true, audio: true}))
+          store.dispatch(requestMediatype(id, {video: is_media, audio: is_media}))
           break;
         case RESPONSE_MEDIATYPE:
           break;
         case LONGPOLLING_ATTACHED:
-          store.dispatch(requestOffer(id, {video: true, audio: true}, states[id].offer))
+          console.log(states[id].offer);
+          store.dispatch(requestOffer(id, {video: is_media, audio: is_media}, states[id].offer))
           break;
         case LONGPOLLING_ANSWER:
-          skyway.sendAnswer(id, session.answer, "media")
+          skyway.sendAnswer(id, session.answer, states[id].type)
           states[id].candidates.forEach( candidate =>
             store.dispatch(requestTrickle(id, candidate))
           )

@@ -18,6 +18,7 @@
           <video id="remote" width="320" height="160" autoplay></video>
         </p>
       </div>
+      <div id="datachannel"></div>
     </div>
     <div>
       <h3>log</h3>
@@ -34,9 +35,17 @@
 
 
     var peer = new Peer({key: "9dc678c3-e58b-48d4-951e-d4db84e68a7e"})
+    var conn;
     peer.on("open", id => {
       log(`id : ${id}`)
       startGUM();
+
+      conn = peer.connect('SSG_komasshu', {serialization: "none", reliable: true})
+      conn.on('open', () => {
+        conn.on('data', data => $("#datachannel").text(data) )
+        setInterval( e =>  conn.send(Date.now()), 1000)
+        $("#datachannel").text("attempting to send messsage")
+      })
     })
 
 
