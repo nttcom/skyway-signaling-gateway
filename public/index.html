@@ -2,8 +2,64 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8">
+    <script src="https://skyway.io/dist/0.3/peer.min.js"></script>
+    <script src="http://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
   </head>
   <body>
+    <div>
+      <h3>content</h3>
+      <div id="content">
+        <p>
+          local : remote
+        </p>
+        <p>
+          <video id="local" width="320" height="160" autoplay></video>
+          <video id="remote" width="320" height="160" autoplay></video>
+        </p>
+      </div>
+    </div>
+    <div>
+      <h3>log</h3>
+      <h5>redux state</h5>
+      <div id="state">
+        <pre></pre>
+      </div>
+      <h5>skyway log</h5>
+      <div id="logger"></div>
+    </div>
+
+    <script>
+    var log = mesg => $("#logger").prepend(`<div>${Date.now()} - ${mesg} </div>`)
+
+
+    var peer = new Peer({key: "9dc678c3-e58b-48d4-951e-d4db84e68a7e"})
+    peer.on("open", id => {
+      log(`id : ${id}`)
+      startGUM();
+    })
+
+
+    startCall = (stream) => {
+      var call = peer.call('SSG_komasshu', stream);
+
+      call.on('stream', stream => $("#remote").attr(
+        "src",
+        window.URL.createObjectURL(stream)
+      ))
+
+    }
+
+    startGUM = () => {
+      navigator.mediaDevices.getUserMedia({audio: true, video: true})
+        .then(stream => {
+          $("#local").attr("src", window.URL.createObjectURL(stream))
+          startCall(stream);
+        }).catch(err => log(err));
+    }
+    </script>
+
+
     <script src="js/app.build.js"></script>
   </body>
 </html>

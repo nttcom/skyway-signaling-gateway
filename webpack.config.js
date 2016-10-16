@@ -6,7 +6,7 @@ var path = require('path')
 switch(process.env.NODE_ENV) {
   default:
     _entry = {
-      "app": "./redux-libs/entry.js"
+      "app": "./libs/entry.js"
     };
     break;
 }
@@ -20,6 +20,9 @@ module.exports = {
     filename: process.env.NODE_ENV === "production" ? "[name].build.min.js" : "[name].build.js"
   },
   module: {
+    preLoaders: [
+      { test: /\.json$/, exclude: /node_modules/, loader: 'json'  }
+    ],
     loaders: [
       {
         test: /\.(js|jsx)?$/,

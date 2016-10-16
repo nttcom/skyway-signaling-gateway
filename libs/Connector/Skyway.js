@@ -1,18 +1,11 @@
 "use strict";
 
-var util = require("../util")
-  , log4js = require("log4js")
-  , WebSocket = require("ws")
-  , converter = require("../Converter/Skyway.js")
-  , EventEmitter = require("events").EventEmitter
+// const WebSocket = require("ws")
+const EventEmitter = require("events").EventEmitter
 
+const util = require("../miscs/util")
 
-
-var CONF = require('../../conf/skyway.json');
-
-var logger = log4js.getLogger("Connector/Skyway");
-
-// Connector/Skyway.js
+const CONF = require('../../conf/skyway.json');
 
 class SkywayConnector extends EventEmitter {
   constructor(params){
@@ -22,20 +15,15 @@ class SkywayConnector extends EventEmitter {
     this.serverAddr = CONF.serverAddr || "skyway.io";
     this.serverPort = CONF.serverPort || 443;
     this.path       = CONF.path       || "/";
-    this.apikey    =  params.option && params.option.api_key  || CONF.apikey || "********-****-****-****-************";
-    this.origin     = params.option && params.option.origin   || CONF.origin || "http://example.com";
+    this.apikey    =  params.option && params.option.api_key  || CONF.apikey;
+    this.origin     = params.option && params.option.origin   || CONF.origin;
 
     // configure random parameters
     this.myPeerid    = params.option && params.option.peerid  || "SSG_"+util.randomIdForSkyway();
     this.token   = util.randomTokenForSkyway();
     this.brPeerid = null;
 
-    this.hook = {};
-    this.stack = [];
-    this.stack_candidate = [];
-    this.is_wait = false;
-    this.is_ice_negotiating = false;
-    this.callbacks = {};
+    this.connections = {};
 
     // setup url for SkyWay server
     this.serverUrl = [
@@ -50,160 +38,140 @@ class SkywayConnector extends EventEmitter {
     ].join("");
   }
 
-  connect(callback, Stub){
-    // start websocket connection with Skyway SV
-    this.socket = !Stub ?  new WebSocket(this.serverUrl, {"origin": this.origin}) : new Stub(callback);
+  /**
+   * start connection to SkyWay signalling server
+   */
+  connect(callback){
+    this.socket = new WebSocket(this.serverUrl, [] , {"origin": this.origin});
 
-    logger.info("start establishing connection to server");
+    console.info("start establishing connection to server");
 
-    this.callbacks.onopen = callback;
     this.setSocketHandler();
   }
 
-  setBrPeerid(peerid) {
-    this.brPeerid = peerid;
+  sendOffer() {
+
   }
 
-  setHook(type, func) {
-    this.hook[type] = func;
-  }
-
-  send(cgofMsg) {
-    // send message to Skyway server
-
-    // todo: check socket status (this.socket  !== null || this.socket.status???)
-    try {
-      // todo: fi this.brPeerid is null throw error
-      var skywayMsg = converter.to_skyway(cgofMsg, this.myPeerid, this.brPeerid);
-
-      if(skywayMsg.type === "X_JANUS") {
-        // logger.debug("send - discard to send : " + strMsg);
-      } else {
-        var strMsg = JSON.stringify(skywayMsg);
-        // logger.debug("send - message to SkyWay server : " + strMsg);
-
-        this.socket.send(strMsg);
-      }
-    } catch(err) {
-      logger.error(err);
+  sendAnswer(id, jsep, type="media") {
+    let json = {
+      src: this.myPeerid,
+      dst: this.connections[id].src,
+      payload: {
+        browser: "Chrome",
+        connectionId: id,
+        sdp: jsep,
+        type
+      },
+      type: "ANSWER"
     }
+    this.send(json)
   }
 
-  sendback(cgofMsg) {
+  sendTricle() {
+
+  }
+
+  sendPong() {
+    let json = {type: "PONG"}
+    this.send(json)
+  }
+
+  send(json) {
+    // send message to Skyway server
     try {
-      var strMsg = JSON.stringify(cgofMsg.message);
-      this.socket.send(strMsg);
+      let mesg = JSON.stringify(json);
+      this.socket.send(mesg);
     } catch(err) {
-      logger.error(err);
+      console.error(err);
     }
   }
 
   setSocketHandler(){
     // connection established
-    this.socket.on("open", () => {
-      this.emit("open");
-      logger.info("connection established");
-
+    this.socket.addEventListener("open", () => {
+      this.emit("socket/open");
+      console.info("connection established");
     });
 
     // unfortunately, error happened
-    this.socket.on("error", (err) => {
-      this.emit("error", err);
-      logger.error(err);
+    this.socket.addEventListener("error", (err) => {
+      this.emit("socket/error", err);
+      console.error(err);
     });
 
     // connection closed
-    this.socket.on("close", () => {
-      this.emit("close");
-      logger.info("connection closed");
+    this.socket.addEventListener("close", () => {
+      this.emit("socket/close");
+      console.info("connection closed");
     });
 
     // when message received, it will be handled in messageHandler.
-    this.socket.on("message", (strMsg)  => {
-      this.emit("internal-message", JSON.parse(strMsg));
-
+    this.socket.addEventListener("message", (ev)  => {
       try {
-        let mesg = JSON.parse(strMsg);
-        if(Object.keys(this.hook).length > 0) {
-          if(this.is_wait) {
-            this.stack.push(strMsg);
-            return;
-          } else if (mesg.type === "CANDIDATE" && !this.is_ice_negotiating) {
-            this.stack_candidate.push(strMsg);
-            return;
-          }
-        }
-
-        if(this.hook[mesg.type]) {
-          logger.debug("hook found!!");
-          this.is_wait = true;
-          this.stack.push(strMsg);
-          this.hook[mesg.type]().then(() => {
-            // this resolv will be called after attached to janus plugin.
-            logger.debug("start transferring offer/candidate messages");
-            this.is_ice_negotiating = true;
-            this.is_wait = false;
-
-            // transfer all stacked data (offer and candidates) to Janus
-            this.stack.forEach((msg) => { this.messageHandlerFromServer(msg); });
-            this.stack_candidate.forEach((msg) => { this.messageHandlerFromServer(msg); });
-            this.stack.length = 0;
-            this.stack_candidate.length = 0;
-
-            // to prevent stacking ice candidate after offer is sent for a while (5sec)
-            setTimeout((ev) => {
-              this.is_ice_negotiating = false;
-            }, 5000);
-          }).catch((err) => {
-            logger.warn(err);
-          });
-        } else {
-          this.messageHandlerFromServer(strMsg);
-        }
+        let mesg = JSON.parse(ev.data);
+        this.messageHandlerFromServer(mesg);
       } catch(err) {
-        logger.warn(err);
+        console.warn(err.toString());
       }
     });
   }
 
+  emitEvent(mesg) {
+    this.emit('event', mesg.type, mesg)
+  }
+
   messageHandlerFromServer(mesg) {
     try {
-      logger.debug("messageHandlerFromServer -  : %s", mesg);
+      console.log(`receive from SkyWay ${mesg.type}`);
+      console.log(mesg);
+      let id = mesg.payload && mesg.payload.connectionId
+      let src = mesg.src
+      let dst = mesg.dst
 
-      if(typeof(mesg) === "string") {
-        var skywayMsg = JSON.parse(mesg);
-      } else {
-        var skywayMsg = mesg;
-      }
-
-      // if message type equal "OPEN", call onopen callback then return
-      if(skywayMsg.type === "OPEN") {
-        if(this.callbacks.onopen && typeof(this.callbacks.onopen === "function")) {
-          this.callbacks.onopen();
-        };
-        return;
-      }
-
-      // if message type is not "OPEN", convert it as cgof message then proceed as follows
-      if(!!skywayMsg.src) {
-        this.brPeerid = skywayMsg.src;
-      }
-
-      var cgofMsg = converter.to_cgof(skywayMsg);
-
-      switch(cgofMsg.action){
-      case "forward":
-        this.emit("message", cgofMsg);
-        break;
-      case "sendback":
-        this.sendback(cgofMsg);
-      case "discard":
-      default:
-        break;
-
+      switch(mesg.type) {
+        case 'OPEN':
+          // connection to skyway established. this doesn't mean that peer opened
+          this.emitEvent(mesg)
+          break;
+        case 'PING':
+          // receive keepalive message
+          // simply send pong back
+          this.sendPong()
+          break;
+        case 'OFFER':
+          // receive OFFER from skyway
+          this.emitEvent(mesg)
+          let offer = mesg.payload.sdp
+          this.connections[id] = Object.assign({}, this.connections[id], {
+            src, dst, offer
+          });
+          this.emit('receive/offer', id, offer)
+          break;
+        case 'ANSWER':
+          // receive ANSWER from skyway
+          this.emitEvent(mesg)
+          let answer = mesg.payload.sdp
+          this.connections[id] = Object.assign({}, this.connections[id], {
+            [id]: {src, dst, answer}
+          });
+          this.emit('receive/answer', id, answer)
+          break;
+        case 'CANDIDATE':
+          // receive ANSWER from skyway
+          this.emitEvent(mesg)
+          let candidate = mesg.payload.candidate
+          this.connections[id] = Object.assign({}, this.connections[id], {
+            [id]: {src, dst, candidate}
+          });
+          this.emit('receive/candidate', id, candidate)
+          break;
+        default:
+          console.warn(`unknown message [${mesg.type}]`)
+          break;
       }
     } catch(err) {
-      logger.error(err);
+      console.error(err);
     }
   }
 }

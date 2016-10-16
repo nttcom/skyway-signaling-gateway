@@ -37,7 +37,6 @@ const REQUEST_DETACH = 'REQUEST_DETACH'
 const RESPONSE_DETACH = 'RESPONSE_DETACH'
 const REQUEST_DESTROY = 'REQUEST_DESTROY'
 const RESPONSE_DESTROY = 'RESPONSE_DESTROY'
-const KEEPALIVE = 'KEEPALIVE'
 const UNKNOWN = 'UNKNOWN'
 
 const EXPECTS = {
@@ -54,6 +53,7 @@ const EXPECTS = {
 
 // actions
 function requestJanus(id, janus_type, transaction, jsonBody) {
+  console.log(janus_type)
   return {
     type: janus_type,
     id,
@@ -72,15 +72,41 @@ function receiveJanus(id, janus_type, transaction, json) {
 }
 
 function receiveLongPolling(id, json) {
-  if(json.janus === "event" && json.plugindata ) {
-    return {
-      type: LONGPOLLING_ATTACHED,
-      id,
-      json
+  if(json.janus === "event") {
+    if(json.plugindata && json.transaction && json.jsep && json.jsep.type === "answer") {
+      return {
+        type: LONGPOLLING_ANSWER,
+        id,
+        json
+      }
+    } else if(json.plugindata && json.transaction && json.jsep && json.jsep.type === "offer") {
+      return {
+        type: LONGPOLLING_OFFER,
+        id,
+        json
+      }
+    } else if(json.plugindata && json.transaction && !json.jsep) {
+      return {
+        type: LONGPOLLING_ATTACHED,
+        id,
+        json
+      }
+    } else if(json.plugindata && !json.transaction && !json.jsep) {
+      return {
+        type: LONGPOLLING_DONE,
+        id,
+        json
+      }
     }
   } else if (json.janus === "keepalive"){
     return {
-      type: KEEPALIVE,
+      type: LONGPOLLING_KEEPALIVE,
+      id,
+      json
+    }
+  } else if (json.janus === "hangup") {
+    return {
+      type: LONGPOLLING_HANGUP,
       id,
       json
     }
@@ -118,6 +144,7 @@ function fetchJanus(id, janus_type, jsonBody) {
     let attach_id = state.sessions[id] && state.sessions[id].attach_id
     let path = _.compact(['janus', session_id, attach_id]).join("/")
     let transaction = util.createTransactionId();
+
     jsonBody = Object.assign({}, jsonBody, {transaction})
     dispatch(requestJanus(id, janus_type, transaction, jsonBody))
 
@@ -145,12 +172,11 @@ function fetchJanus(id, janus_type, jsonBody) {
 }
 
 // exports
-function requestMediatype(id, media_type = {audio: true, video: true}) {
-  return dispatch => {
-    dispatch(fetchJanus(id, REQUEST_MEDIATYPE, {
-      janus: "message",
-      body: media_type
-    }))
+
+
+function requestCreateId(id) {
+  return (dispatch) => {
+    return dispatch(fetchJanus(id, REQUEST_CREATE_ID, {"janus": "create"}))
   }
 }
 
@@ -163,9 +189,32 @@ function requestAttach(id, plugin) {
   }
 }
 
-function requestCreateId(id) {
-  return (dispatch) => {
-    return dispatch(fetchJanus(id, REQUEST_CREATE_ID, {"janus": "create"}))
+
+function requestMediatype(id, media_type = {audio: true, video: true}) {
+  return dispatch => {
+    dispatch(fetchJanus(id, REQUEST_MEDIATYPE, {
+      janus: "message",
+      body: media_type
+    }))
+  }
+}
+
+function requestOffer(id, media_type = {audio: true, video: true}, jsep) {
+  return dispatch => {
+    dispatch(fetchJanus(id, REQUEST_OFFER, {
+      janus: "message",
+      body: media_type,
+      jsep
+    }))
+  }
+}
+
+function requestTrickle(id, candidate) {
+  return dispatch => {
+    dispatch(fetchJanus(id, REQUEST_TRICKLE, {
+      janus: "trickle",
+      candidate
+    }))
   }
 }
 
@@ -195,9 +244,10 @@ module.exports = {
   RESPONSE_DETACH,
   REQUEST_DESTROY,
   RESPONSE_DESTROY,
-  KEEPALIVE,
   UNKNOWN,
   requestMediatype,
   requestAttach,
-  requestCreateId
+  requestCreateId,
+  requestOffer,
+  requestTrickle
 }
