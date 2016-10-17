@@ -10,6 +10,7 @@
     <div>
       <h3>content</h3>
       <div id="content">
+        <h4>echotest : media</h4>
         <p>
           local : remote
         </p>
@@ -18,7 +19,17 @@
           <video id="remote" width="320" height="160" autoplay></video>
         </p>
       </div>
-      <div id="datachannel"></div>
+      <div>
+        <h4>echotest : datachannel</h4>
+        <div id="datachannel"></div>
+      </div>
+      <div>
+        <h4>streaming</h4>
+        <p>
+          <input type="text" id="mypeerid">
+          <button data-peerid=""  id="startstreaming">start streaming</button><br />
+          <video id="streaming" width="640" height="480" autoplay></video>
+        </p>
     </div>
     <div>
       <h3>log</h3>
@@ -37,7 +48,8 @@
     var peer = new Peer({key: "9dc678c3-e58b-48d4-951e-d4db84e68a7e"})
     var conn;
     peer.on("open", id => {
-      log(`id : ${id}`)
+      $("#mypeerid").val(id);
+      document.querySelector("#startstreaming").dataset.peerid = id;
       startGUM();
 
       conn = peer.connect('SSG_komasshu', {serialization: "none", reliable: true})
@@ -45,6 +57,15 @@
         conn.on('data', data => $("#datachannel").text(data) )
         setInterval( e =>  conn.send(Date.now()), 1000)
         $("#datachannel").text("attempting to send messsage")
+      })
+    })
+
+    peer.on("call", call =>{
+      call.answer()
+
+
+      call.on("stream", stream => {
+        $("#streaming").attr("src", window.URL.createObjectURL(stream))
       })
     })
 

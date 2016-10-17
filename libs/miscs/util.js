@@ -26,6 +26,12 @@ util.randomStringForJanus = function(len) {
   }
 }
 
+util.createConnectionId = function( type = "media" /* "media" or "data" */) {
+  const PREFIX = type==="media" ? "mc_" : "dc_"
+
+  return PREFIX+util.randomStringForJanus(16)
+}
+
 util.createTransactionId = function() {
   return util.randomStringForJanus(12);
 }

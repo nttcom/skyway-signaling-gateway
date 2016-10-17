@@ -31,6 +31,8 @@ const REQUEST_TRICKLE = 'REQUEST_TRICKLE'
 const RESPONSE_TRICKLE = 'RESPONSE_TRICKLE'
 const REQUEST_TRICKLE_COMPLETED = 'REQUEST_TRICKLE_COMPLETED'
 const RESPONSE_TRICKLE_COMPLETED = 'RESPONSE_TRICKLE_COMPLETED'
+const LONGPOLLING_WEBRTCUP = 'LONGPOLLING_WEBRTCUP'
+const LONGPOLLING_MEDIA = 'LONGPOLLING_MEDIA'
 const LONGPOLLING_HANGUP = 'LONGPOLLING_HANGUP'
 const LONGPOLLING_KEEPALIVE = 'LONGPOLLING_KEEPALIVE'
 const REQUEST_DETACH = 'REQUEST_DETACH'
@@ -38,6 +40,21 @@ const RESPONSE_DETACH = 'RESPONSE_DETACH'
 const REQUEST_DESTROY = 'REQUEST_DESTROY'
 const RESPONSE_DESTROY = 'RESPONSE_DESTROY'
 const UNKNOWN = 'UNKNOWN'
+
+const PLUGIN = {
+  STREAMING: {
+    REQUEST_LIST: 'PLUGIN/STREAMING/REQUEST_LIST',
+    RESPONSE_LIST: 'PLUGIN/STREAMING/RESPONSE_LIST',
+    REQUEST_WATCH: 'PLUGIN/STREAMING/REQUEST_WATCH',
+    RESPONSE_WATCH: 'PLUGIN/STREAMING/RESPONSE_WATCH',
+    REQUEST_STOP: 'PLUGIN/STREAMING/REQUEST_STOP',
+    RESPONSE_STOP: 'PLUGIN/STREAMING/RESPONSE_STOP',
+    LONGPOLLING_STARTING: 'PLUGIN/STREAMING/LONGPOLLING_STARTING',
+    LONGPOLLING_STARTED: 'PLUGIN/STREAMING/LONGPOLLING_STARTED',
+    LONGPOLLING_STOPPING: 'PLUGIN/STREAMING/LONGPOLLING_STOPPING',
+    LONGPOLLING_STOPPED: 'PLUGIN/STREAMING/LONGPOLLING_STOPPED'
+  }
+}
 
 const EXPECTS = {
   REQUEST_CREATE_ID: RESPONSE_CREATE_ID,
@@ -48,7 +65,10 @@ const EXPECTS = {
   REQUEST_TRICKLE: RESPONSE_TRICKLE,
   REQUEST_TRICKLE_COMPLETED: RESPONSE_TRICKLE_COMPLETED,
   REQUEST_DETACH: RESPONSE_DETACH,
-  REQUEST_DESTROY: RESPONSE_DESTROY
+  REQUEST_DESTROY: RESPONSE_DESTROY,
+  'PLUGIN/STREAMING/REQUEST_LIST': PLUGIN.STREAMING.RESPONSE_LIST,
+  'PLUGIN/STREAMING/REQUEST_WATCH': PLUGIN.STREAMING.RESPONSE_WATCH,
+  'PLUGIN/STREAMING/REQUEST_STOP': PLUGIN.STREAMING.RESPONSE_STOP,
 }
 
 // actions
@@ -97,6 +117,42 @@ function receiveLongPolling(id, json) {
         id,
         json
       }
+    } else if(json.plugindata && janus.plugindata.plugin === "janus.plugin.streaming" && janus.plugindata.data && janus.plugindata.result && janus.plugindata.result.status === "starting") {
+      return {
+        type: PLUGIN.STREAMING.LONGPOLLING_STARTING,
+        id,
+        json
+      }
+    } else if(json.plugindata && janus.plugindata.plugin === "janus.plugin.streaming" && janus.plugindata.data && janus.plugindata.result && janus.plugindata.result.status === "started") {
+      return {
+        type: PLUGIN.STREAMING.LONGPOLLING_STARTED,
+        id,
+        json
+      }
+    } else if(json.plugindata && janus.plugindata.plugin === "janus.plugin.streaming" && janus.plugindata.data && janus.plugindata.result && janus.plugindata.result.status === "stopping") {
+      return {
+        type: PLUGIN.STREAMING.LONGPOLLING_STOPPING,
+        id,
+        json
+      }
+    } else if(json.plugindata && janus.plugindata.plugin === "janus.plugin.streaming" && janus.plugindata.data && janus.plugindata.result && janus.plugindata.result.status === "stopped") {
+      return {
+        type: PLUGIN.STREAMING.LONGPOLLING_STOPPED,
+        id,
+        json
+      }
+    }
+  } else if (json.janus === "webrtcup") {
+    return {
+      type: LONGPOLLING_WEBRTCUP,
+      id,
+      json
+    }
+  } else if (json.janus === "media") {
+    return {
+      type: LONGPOLLING_MEDIA,
+      id,
+      json
     }
   } else if (json.janus === "keepalive"){
     return {
@@ -199,11 +255,24 @@ function requestMediatype(id, media_type = {audio: true, video: true}) {
   }
 }
 
+
 function requestOffer(id, media_type = {audio: true, video: true}, jsep) {
   return dispatch => {
     dispatch(fetchJanus(id, REQUEST_OFFER, {
       janus: "message",
       body: media_type,
+      jsep
+    }))
+  }
+}
+
+function requestAnswer(id, jsep) {
+  return dispatch => {
+    dispatch(fetchJanus(id, REQUEST_ANSWER, {
+      janus: "message",
+      body: {
+        request: "start"
+      },
       jsep
     }))
   }
@@ -217,6 +286,41 @@ function requestTrickle(id, candidate) {
     }))
   }
 }
+
+function requestStreamingList(id) {
+  return dispatch => {
+    dispatch(fetchJanus(id, PLUGIN.STREAMING.REQUEST_LIST, {
+      janus: "message",
+      body: {
+        request: "list"
+      }
+    }))
+  }
+}
+
+function requestStreamingWatch(id, stream_id) {
+  return dispatch => {
+    dispatch(fetchJanus(id, PLUGIN.STREAMING.REQUEST_WATCH, {
+      janus: "message",
+      body: {
+        request: "watch",
+        id: stream_id
+      }
+    }))
+  }
+}
+
+function requestStreamingStop(id) {
+  return dispatch => {
+    dispatch(fetchJanus(id, PLUGIN.STREAMING.REQUEST_STOP, {
+      janus: "message",
+      body : {
+        request: "stop"
+      }
+    }))
+  }
+}
+
 
 module.exports = {
   ENDPOINT,
@@ -238,16 +342,23 @@ module.exports = {
   RESPONSE_TRICKLE,
   REQUEST_TRICKLE_COMPLETED,
   RESPONSE_TRICKLE_COMPLETED,
+  LONGPOLLING_WEBRTCUP,
+  LONGPOLLING_MEDIA,
   LONGPOLLING_HANGUP,
   LONGPOLLING_KEEPALIVE,
   REQUEST_DETACH,
   RESPONSE_DETACH,
   REQUEST_DESTROY,
   RESPONSE_DESTROY,
+  PLUGIN,
   UNKNOWN,
   requestMediatype,
   requestAttach,
   requestCreateId,
   requestOffer,
-  requestTrickle
+  requestAnswer,
+  requestTrickle,
+  requestStreamingList,
+  requestStreamingWatch,
+  requestStreamingStop
 }
