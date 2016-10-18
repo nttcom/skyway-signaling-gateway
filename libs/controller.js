@@ -57,7 +57,7 @@ class Controller extends EventEmitter {
   setSkywayHandler() {
     this.skyway.on("receive/offer", (id, offer, type) => {
       let buff = this.buffers[id] || {candidates: [], shouldBuffer: true}
-      this.plugins     = Object.assign({}, this.plugins, {[id]: "echotest"})
+      this.plugins     = Object.assign({}, this.plugins, {[id]: "skywayiot"})
       this.buffers[id] = Object.assign({}, buff, {offer, type})
       this.janusStore.dispatch(requestCreateId(id))
     })
