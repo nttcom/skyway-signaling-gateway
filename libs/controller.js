@@ -1,5 +1,6 @@
 const md5 = require('md5')
 const EventEmitter = require("events").EventEmitter
+const log4js = require('log4js')
 
 const {
   RESPONSE_CREATE_ID,
@@ -9,6 +10,7 @@ const {
   LONGPOLLING_ATTACHED,
   LONGPOLLING_OFFER,
   LONGPOLLING_ANSWER,
+  LONGPOLLING_KEEPALIVE,
   PLUGIN,
   requestCreateId,
   requestAttach,
@@ -22,6 +24,7 @@ const {
 } = require('./redux-libs/actions')
 const util = require('./miscs/util')
 
+const logger = log4js.getLogger('controller')
 
 /**
  * buffers = {
@@ -43,6 +46,7 @@ class Controller extends EventEmitter {
 
     this.buffers = {}
     this.plugins = {}  /* {[id]: "streaming"} */
+    this.streaming_connectionids = {}
     this.prevHashes = {}
 
     this.janusStore = janusStore // store for Janus
@@ -98,11 +102,12 @@ class Controller extends EventEmitter {
         let prevHash = this.prevHashes[id] || ""
         let currHash = md5(JSON.stringify(JSON.stringify(session)))
         if(prevHash === currHash) {
-          console.log(`state not changed, skip procedure for ${id}`)
+          // logger.debug(`state not changed, skip procedure for ${id}`)
           continue;
         } else {
           this.prevHashes[id] = currHash
         }
+        logger.info(`${session.status}   [${id}]`)
 
         let is_media = this.buffers[id].type === "media"
         switch(session.status) {
@@ -147,23 +152,37 @@ class Controller extends EventEmitter {
     this.buffers[id].shouldBuffer = false;
   }
 
-  startStreaming(src) {
+  startStreaming(handle_id, src) {
     // fixme : check skyway status
-    console.dir(this.skyway)
-    if(this.skyway.status !== "opened" ) throw "skyway is not opened"
+    if(this.skyway.status !== "opened" ) {
+      logger.error( "skyway is not opened" );
+      return;
+    }
 
-    console.log(`start streaming ${src}`)
 
     const connection_id = util.createConnectionId("media")
+    this.streaming_connectionids[handle_id] = connection_id;
+
+    logger.info(`start streaming src: ${src}, connection_id: ${connection_id} `)
+
     this.plugins = Object.assign({}, this.plugins, {[connection_id]: "streaming"})
     let buff = this.buffers[connection_id] || {candidates: []}
     this.buffers[connection_id] = Object.assign({}, buff, {type: "media"})
 
     // since, using streaming plugin does not initiate peer from browser,
-    // so we will connection object in SkyWay connector, explicitly
+    // so we will use connection object in SkyWay connector, explicitly
     this.skyway.updatePeerConnection(connection_id, { src, dst: this.my_peerid })
     this.janusStore.dispatch(requestCreateId(connection_id))
+  }
 
+  stopStreaming(handle_id) {
+    if(this.skyway.status !== 'opened') {
+      logger.error( "skyway is not opened" )
+      return;
+    }
+    let connection_id = this.streaming_connectionids[handle_id]
+    logger.info(`stop streaming connection_id: ${connection_id} `)
+    this.janusStore.dispatch(requestStreamingStop(connection_id))
   }
 }
 

@@ -1,11 +1,14 @@
 /**
  * actions.js
  */
+const CONF = require('../../conf/janus.json')
+
+
 const fetch = require('isomorphic-fetch')
 const util  = require('../miscs/util')
 const _     = require('underscore')
 
-const ENDPOINT = 'https://192.168.33.10:8089'
+const ENDPOINT = CONF['rest_scheme'] + "://" + CONF['endpoint_addr'] + ":" + CONF['rest_port']
 
 // constants for actions
 const REQUEST_JANUS = 'REQUEST_POST'
@@ -73,7 +76,6 @@ const EXPECTS = {
 
 // actions
 function requestJanus(id, janus_type, transaction, jsonBody) {
-  console.log(janus_type)
   return {
     type: janus_type,
     id,
@@ -105,7 +107,7 @@ function receiveLongPolling(id, json) {
         id,
         json
       }
-    } else if(json.plugindata && json.transaction && !json.jsep) {
+    } else if(json.plugindata && json.transaction && !json.jsep && json.plugindata.data && json.plugindata.data.result === 'ok') {
       return {
         type: LONGPOLLING_ATTACHED,
         id,
@@ -117,25 +119,25 @@ function receiveLongPolling(id, json) {
         id,
         json
       }
-    } else if(json.plugindata && janus.plugindata.plugin === "janus.plugin.streaming" && janus.plugindata.data && janus.plugindata.result && janus.plugindata.result.status === "starting") {
+    } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "starting") {
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STARTING,
         id,
         json
       }
-    } else if(json.plugindata && janus.plugindata.plugin === "janus.plugin.streaming" && janus.plugindata.data && janus.plugindata.result && janus.plugindata.result.status === "started") {
+    } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "started") {
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STARTED,
         id,
         json
       }
-    } else if(json.plugindata && janus.plugindata.plugin === "janus.plugin.streaming" && janus.plugindata.data && janus.plugindata.result && janus.plugindata.result.status === "stopping") {
+    } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "stopping") {
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STOPPING,
         id,
         json
       }
-    } else if(json.plugindata && janus.plugindata.plugin === "janus.plugin.streaming" && janus.plugindata.data && janus.plugindata.result && janus.plugindata.result.status === "stopped") {
+    } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "stopped") {
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STOPPED,
         id,

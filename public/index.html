@@ -1,140 +1,17 @@
 <!doctype html>
-<html lang="ja">
+<html>
   <head>
-    <meta charset="utf-8">
-    <script src="https://skyway.io/dist/0.3/peer.min.js"></script>
-    <script src="http://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
-    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
-
-    <style>
-    .left {
-      float: left;
-      width: 1000px;
-    }
-    .right {
-      margin-left:1000px;
-    }
-    .clearfix{
-      clear: both;
-    }
-    #log-section {
-      background: rgba(186, 75, 132, 0.16);
-      color : rgb(94, 9, 101);
-      padding: 0 3px;
-    }
-    </style>
+    <meta charset="utf-8" />
+    <title>Dashboard</title>
   </head>
   <body>
-    <div>
-      <div class="left">
-        <h3>content</h3>
-        <div id="content">
-          <h4>echotest : media</h4>
-
-          <p>
-            <button id="start-media-echo">start media echo test</button>
-            <button id="start-datachannel-echo">start datachannel echo test</button>
-          </p>
-          <p>
-            <h5>local / echo</h5>
-            <video id="local-media" width="480" height="320" autoplay></video>
-            <video id="echo-media" width="480" height="320" autoplay></video>
-          </p>
-
-          <h4>echotest : datachannel</h4>
-          <p>
-            <strong>local</strong> : <span id="local-datachannel"></span>
-            <br />
-            <strong>echo</strong> : <span id="echo-datachannel"></span>
-          </p>
-
-          <h4>streaming</h4>
-          <p>
-            <input type="text" id="mypeerid">
-            <button id="startstreaming">start streaming</button><br />
-          </p>
-          <p>
-            <video id="streaming" width="640" height="480" autoplay></video>
-          </p>
-
-        </div>
+    <div id="container">
+      <h1>Dashboard</h1>
+      <div id="menu">
+        <ul>
+          <li><a href="/example/">example site</a></li>
+        </ul>
       </div>
-      <div class="right">
-        <div id="log-section">
-          <h3>log</h3>
-          <h5>state of janusStore</h5>
-          <div id="state">
-            <pre></pre>
-          </div>
-          <h5>skyway log</h5>
-          <div id="logger"></div>
-        </div>
-      </div>
-      <div class="clearfix"></div>
     </div>
-
-    <script>
-    var log = mesg => $("#logger").prepend(`<div>${Date.now()} - ${mesg} </div>`)
-
-    function start() {
-      var peer = new Peer({key: "9dc678c3-e58b-48d4-951e-d4db84e68a7e"})
-
-      peer.on("open", id => {
-        $("#mypeerid").val(id);
-
-        $("#start-media-echo").on("click", e => startGUM())
-        $("#start-datachannel-echo").on("click", e => startDCEcho())
-      })
-
-      // this is for streaming plugin
-      peer.on("call", call =>{
-        call.answer()
-
-        call.on("stream", stream => {
-          $("#streaming").attr("src", window.URL.createObjectURL(stream))
-        })
-      })
-
-
-      // start media echo
-      startGUM = () => {
-        navigator.mediaDevices.getUserMedia({audio: true, video: true})
-          .then(stream => {
-            $("#local-media").attr("src", window.URL.createObjectURL(stream))
-            startCall(stream);
-          }).catch(err => log(err));
-      }
-
-      startCall = (stream) => {
-        var call = peer.call('SSG_komasshu', stream);
-
-        call.on('stream', stream => $("#echo-media").attr(
-          "src",
-          window.URL.createObjectURL(stream)
-        ))
-
-      }
-
-      // start datachannel echo
-      startDCEcho = () => {
-        var conn = peer.connect('SSG_komasshu', {serialization: "none", reliable: true})
-        conn.on('open', () => {
-          conn.on('data', data => $("#echo-datachannel").text(data) )
-
-          setInterval( e => {
-            let mesg = `timestamp "${Date.now()}"`
-            $("#local-datachannel").text(mesg)
-            conn.send(mesg)
-          }, 1000)
-        })
-      }
-
-    }
-    start();
-
-    </script>
-
-
-    <script src="js/app.build.js"></script>
   </body>
 </html>
