@@ -8,7 +8,7 @@ const log4js = require('log4js')
 
 const logger = log4js.getLogger('echo-test')
 
-const CONF = require('./conf/janus.json')
+const CONF = require('../conf/janus.json')
 const port = CONF['external']['tcp_port']
 
 

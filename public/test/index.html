@@ -2,9 +2,9 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8">
-    <script src="https://skyway.io/dist/0.3/peer.min.js"></script>
-    <script src="http://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
-    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script src="/js/peer.0.3.min.js"></script>
+    <script src="/js/jquery-2.2.4.min.js"></script>
+    <script src="/js/webrtc-adapter.js"></script>
 
   </head>
   <body>
@@ -71,7 +71,7 @@
           .then(stream => {
             $("#mesg-sending-voice").text("sending voice stream...")
             startCall(stream);
-          }).catch(err => log(err));
+          }).catch(err => console.error(err));
       }
 
       startCall = (stream) => {
