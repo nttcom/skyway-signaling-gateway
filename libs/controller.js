@@ -2,6 +2,8 @@ const md5 = require('md5')
 const EventEmitter = require("events").EventEmitter
 const log4js = require('log4js')
 
+const CONF = require('../conf/skyway.json')
+
 const {
   RESPONSE_CREATE_ID,
   RESPONSE_ATTACH,
@@ -39,10 +41,10 @@ const logger = log4js.getLogger('controller')
  *
  */
 class Controller extends EventEmitter {
-  constructor(my_peerid, janusStore, Skyway) {
-    super(my_peerid, janusStore, Skyway);
+  constructor(janusStore, Skyway) {
+    super(janusStore, Skyway);
 
-    this.my_peerid = my_peerid || 'SSG_komasshu'
+    this.my_peerid = process.env.PEERID || CONF['peerid'] || null
 
     this.buffers = {}
     this.plugins = {}  /* {[id]: "streaming"} */

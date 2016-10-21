@@ -10,8 +10,7 @@ const webserver = require('./libs/webserver')
 // ignore self signed tls connection
 process.env.NODE_TLS_REJECT_UNAUTHORIZED="0"
 
-
-let controller = new Controller('SSG_komasshu', janusStore, Skyway)
+let controller = new Controller(janusStore, Skyway)
 let pluginConn = new PluginConnector()
 let extInterface = new ExtInterface()
 

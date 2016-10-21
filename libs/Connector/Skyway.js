@@ -47,7 +47,7 @@ class SkywayConnector extends EventEmitter {
   connect(){
     this.socket = new WebSocket(this.serverUrl, [] , {"origin": this.origin});
 
-    console.info("start establishing connection to server");
+    console.info(`start establishing connection to server (${this.myPeerid})`);
 
     this.status = "opening"
     // connection established
