@@ -1,5 +1,3 @@
-// util.js
-
 var util = {}
   , _ = require('underscore')
 
@@ -28,4 +26,14 @@ util.randomStringForJanus = function(len) {
   }
 }
 
-module.exports = util;
+util.createConnectionId = function( type = "media" /* "media" or "data" */) {
+  const PREFIX = type==="media" ? "mc_" : "dc_"
+
+  return PREFIX+util.randomStringForJanus(16)
+}
+
+util.createTransactionId = function() {
+  return util.randomStringForJanus(12);
+}
+
+module.exports = util
