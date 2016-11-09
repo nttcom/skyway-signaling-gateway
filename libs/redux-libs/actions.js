@@ -15,6 +15,15 @@ const REQUEST_JANUS = 'REQUEST_POST'
 const RECEIVE_JANUS = 'RECEIVE_POST'
 const RECEIVE_LONGPOLLING = 'RECEIVE_LONGPOLLING'
 
+const SET_OFFER_FROM_SKYWAY = 'SET_OFFER_FROM_SKYWAY'
+const SET_ANSWER_FROM_SKYWAY = 'SET_ANSWER_FROM_SKYWAY'
+
+const SET_PLUGIN = 'SET_PLUGIN'
+const SET_BUFFER_CANDIDATES = 'SET_BUFFER_CANDIDATES'
+const SET_HANDLE_ID = 'SET_HANDLE_ID'
+
+const PUSH_TRICKLE = 'PUSH_TRICKLE'
+
 // constants for status
 const REQUEST_CREATE_ID = 'REQUEST_CREATE_ID'
 const RESPONSE_CREATE_ID = 'RESPONSE_CREATE_ID'
@@ -75,138 +84,152 @@ const EXPECTS = {
 }
 
 // actions
-function requestJanus(id, janus_type, transaction, jsonBody) {
+function requestJanus(connection_id, janus_type, transaction, jsonBody) {
   return {
     type: janus_type,
-    id,
+    connection_id,
     transaction,
     json: jsonBody
   }
 }
 
-function receiveJanus(id, janus_type, transaction, json) {
+function receiveJanus(connection_id, janus_type, transaction, json) {
   return {
     type: janus_type,
-    id,
+    connection_id,
     transaction,
     json
   }
 }
 
-function receiveLongPolling(id, json) {
+function receiveLongPolling(connection_id, json) {
   if(json.janus === "event") {
     if(json.plugindata && json.transaction && json.jsep && json.jsep.type === "answer") {
       return {
         type: LONGPOLLING_ANSWER,
-        id,
+        connection_id,
         json
       }
     } else if(json.plugindata && json.transaction && json.jsep && json.jsep.type === "offer") {
       return {
         type: LONGPOLLING_OFFER,
-        id,
+        connection_id,
         json
       }
     } else if(json.plugindata && json.transaction && !json.jsep && json.plugindata.data && json.plugindata.data.result === 'ok') {
       return {
         type: LONGPOLLING_ATTACHED,
-        id,
+        connection_id,
         json
       }
     } else if(json.plugindata && !json.transaction && !json.jsep) {
       return {
         type: LONGPOLLING_DONE,
-        id,
+        connection_id,
         json
       }
     } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "starting") {
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STARTING,
-        id,
+        connection_id,
         json
       }
     } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "started") {
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STARTED,
-        id,
+        connection_id,
         json
       }
     } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "stopping") {
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STOPPING,
-        id,
+        connection_id,
         json
       }
     } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "stopped") {
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STOPPED,
-        id,
+        connection_id,
         json
       }
     }
   } else if (json.janus === "webrtcup") {
     return {
       type: LONGPOLLING_WEBRTCUP,
-      id,
+      connection_id,
       json
     }
   } else if (json.janus === "media") {
     return {
       type: LONGPOLLING_MEDIA,
-      id,
+      connection_id,
       json
     }
   } else if (json.janus === "keepalive"){
     return {
       type: LONGPOLLING_KEEPALIVE,
-      id,
+      connection_id,
       json
     }
   } else if (json.janus === "hangup") {
     return {
       type: LONGPOLLING_HANGUP,
-      id,
+      connection_id,
       json
     }
   } else {
     return {
       type: UNKNOWN,
-      id,
+      connection_id,
       json
     }
   }
 }
 
-function startLongPolling(id) {
+function startLongPolling(connection_id) {
   return (dispatch, getState) => {
-    let state = getState()
-    let session_id = state.sessions[id] && state.sessions[id].session_id
+    let { connections }  = getState().sessions
+    let session_id = connections[connection_id] && connections[connection_id].session_id
+
+    if(!!session_id === false) {
+      logger.warn("can't find session_id, maybe attach plugin failed");
+      return;
+    }
     let path = _.compact(['janus', session_id]).join("/")
 
     path = `${path}?rid=${Date.now()}&maxev=1&_=${Date.now()}`
 
     return fetch(`${ENDPOINT}/${path}`)
-      .then( response => response.json() )
+      .then( response => {
+        if(response.ok) {
+          return response.json()
+        } else {
+          logger.warn("response of long polling is not ok");
+          logger.warn(response.text());
+        }
+      } )
       .then( json => {
-        dispatch(startLongPolling(id))
-        // fixme : longpolling must be stopped when session terminated.
-        dispatch(receiveLongPolling(id, json))
+        dispatch(receiveLongPolling(connection_id, json))
+
+        // while connection alive, do long polling.
+        let currCons = getState().sessions.connections
+        if(currCons[connection_id]) dispatch(startLongPolling(connection_id))
       })
   }
 }
 
-function fetchJanus(id, janus_type, jsonBody) {
+function fetchJanus(connection_id, janus_type, jsonBody) {
   return (dispatch, getState) => {
-    let state = getState()
-    let session_id = state.sessions[id] && state.sessions[id].session_id
-    let attach_id = state.sessions[id] && state.sessions[id].attach_id
+    let { connections } = getState().sessions
+    let session_id = connections[connection_id] && connections[connection_id].session_id
+    let attach_id = connections[connection_id] && connections[connection_id].attach_id
     let path = _.compact(['janus', session_id, attach_id]).join("/")
     let transaction = util.createTransactionId();
 
     jsonBody = Object.assign({}, jsonBody, {transaction})
-    dispatch(requestJanus(id, janus_type, transaction, jsonBody))
+    dispatch(requestJanus(connection_id, janus_type, transaction, jsonBody))
 
-    // if(janus_type === REQUEST_ATTACH) dispatch(startLongPolling(id))
+    // if(janus_type === REQUEST_ATTACH) dispatch(startLongPolling(connection_id))
     // fixme: longpolling must be stopped, when terminated
 
     let headers = new Headers()
@@ -221,26 +244,74 @@ function fetchJanus(id, janus_type, jsonBody) {
       body
     }
     return fetch(`${ENDPOINT}/${path}`, opts)
-      .then(response => response.json())
+      .then(response => response.json() )
       .then(json => {
-        dispatch(receiveJanus(id, expect_type, transaction, json))
-        if(expect_type === RESPONSE_CREATE_ID) dispatch(startLongPolling(id))
+        dispatch(receiveJanus(connection_id, expect_type, transaction, json))
+        if(expect_type === RESPONSE_CREATE_ID) dispatch(startLongPolling(connection_id))
       })
   }
 }
 
 // exports
-
-
-function requestCreateId(id) {
-  return (dispatch) => {
-    return dispatch(fetchJanus(id, REQUEST_CREATE_ID, {"janus": "create"}))
+function setOfferFromSkyway(connection_id, offer, p2p_type) {
+  return {
+    type: SET_OFFER_FROM_SKYWAY,
+    connection_id,
+    offer,
+    p2p_type
   }
 }
 
-function requestAttach(id, plugin) {
+function setAnswerFromSkyway(connection_id, answer, p2p_type) {
+  return {
+    type: SET_ANSWER_FROM_SKYWAY,
+    connection_id,
+    answer,
+    p2p_type
+  }
+}
+
+function setHandleId(connection_id, handle_id) {
+  return {
+    type: SET_HANDLE_ID,
+    connection_id,
+    handle_id
+  }
+}
+
+function setPlugin(connection_id, plugin) {
+  return {
+    type: SET_PLUGIN,
+    connection_id,
+    plugin
+  }
+}
+
+function setBufferCandidates(connection_id, flag) {
+  return {
+    type: SET_BUFFER_CANDIDATES,
+    connection_id,
+    shouldBufferCandidates: flag
+  }
+}
+
+function requestCreateId(connection_id, params = {
+  offer: null,
+  p2p_type: null,
+  plugin: null,
+  shouldBufferCandidates: true
+}) {
+  return (dispatch) => {
+    dispatch(setPlugin(connection_id, params.plugin));
+    dispatch(setOfferFromSkyway(connection_id, params.offer, params.p2p_type));
+    dispatch(setBufferCandidates(connection_id, params.shouldBufferCandidates));
+    dispatch(fetchJanus(connection_id, REQUEST_CREATE_ID, {"janus": "create"}))
+  }
+}
+
+function requestAttach(connection_id, plugin) {
   return (dispatch, getState) => {
-    dispatch(fetchJanus(id, REQUEST_ATTACH, {
+    dispatch(fetchJanus(connection_id, REQUEST_ATTACH, {
       janus: "attach",
       plugin: plugin,
     }))
@@ -248,9 +319,9 @@ function requestAttach(id, plugin) {
 }
 
 
-function requestMediatype(id, media_type = {audio: true, video: true}) {
+function requestMediatype(connection_id, media_type = {audio: true, video: true}) {
   return dispatch => {
-    dispatch(fetchJanus(id, REQUEST_MEDIATYPE, {
+    dispatch(fetchJanus(connection_id, REQUEST_MEDIATYPE, {
       janus: "message",
       body: media_type
     }))
@@ -258,9 +329,9 @@ function requestMediatype(id, media_type = {audio: true, video: true}) {
 }
 
 
-function requestOffer(id, media_type = {audio: true, video: true}, jsep) {
+function requestOffer(connection_id, media_type = {audio: true, video: true}, jsep) {
   return dispatch => {
-    dispatch(fetchJanus(id, REQUEST_OFFER, {
+    dispatch(fetchJanus(connection_id, REQUEST_OFFER, {
       janus: "message",
       body: media_type,
       jsep
@@ -268,30 +339,44 @@ function requestOffer(id, media_type = {audio: true, video: true}, jsep) {
   }
 }
 
-function requestAnswer(id, jsep) {
+function requestAnswer(connection_id, params = {
+  answer: null,
+  p2p_type: null,
+  shouldBufferCandidates: false
+}) {
   return dispatch => {
-    dispatch(fetchJanus(id, REQUEST_ANSWER, {
+    dispatch(setAnswerFromSkyway(connection_id, params.answer, params.p2p_type))
+    dispatch(setBufferCandidates(connection_id, params.shouldBufferCandidates))
+    dispatch(fetchJanus(connection_id, REQUEST_ANSWER, {
       janus: "message",
       body: {
         request: "start"
       },
-      jsep
+      jsep: params.answer
     }))
   }
 }
 
-function requestTrickle(id, candidate) {
+function pushTrickle(connection_id, candidate) {
+  return {
+    type: PUSH_TRICKLE,
+    connection_id,
+    candidate
+  }
+}
+
+function requestTrickle(connection_id, candidate) {
   return dispatch => {
-    dispatch(fetchJanus(id, REQUEST_TRICKLE, {
+    dispatch(fetchJanus(connection_id, REQUEST_TRICKLE, {
       janus: "trickle",
       candidate
     }))
   }
 }
 
-function requestStreamingList(id) {
+function requestStreamingList(connection_id) {
   return dispatch => {
-    dispatch(fetchJanus(id, PLUGIN.STREAMING.REQUEST_LIST, {
+    dispatch(fetchJanus(connection_id, PLUGIN.STREAMING.REQUEST_LIST, {
       janus: "message",
       body: {
         request: "list"
@@ -300,9 +385,9 @@ function requestStreamingList(id) {
   }
 }
 
-function requestStreamingWatch(id, stream_id) {
+function requestStreamingWatch(connection_id, stream_id) {
   return dispatch => {
-    dispatch(fetchJanus(id, PLUGIN.STREAMING.REQUEST_WATCH, {
+    dispatch(fetchJanus(connection_id, PLUGIN.STREAMING.REQUEST_WATCH, {
       janus: "message",
       body: {
         request: "watch",
@@ -312,9 +397,9 @@ function requestStreamingWatch(id, stream_id) {
   }
 }
 
-function requestStreamingStop(id) {
+function requestStreamingStop(connection_id) {
   return dispatch => {
-    dispatch(fetchJanus(id, PLUGIN.STREAMING.REQUEST_STOP, {
+    dispatch(fetchJanus(connection_id, PLUGIN.STREAMING.REQUEST_STOP, {
       janus: "message",
       body : {
         request: "stop"
@@ -354,6 +439,12 @@ module.exports = {
   RESPONSE_DESTROY,
   PLUGIN,
   UNKNOWN,
+  SET_OFFER_FROM_SKYWAY,
+  SET_ANSWER_FROM_SKYWAY,
+  SET_HANDLE_ID,
+  SET_PLUGIN,
+  SET_BUFFER_CANDIDATES,
+  PUSH_TRICKLE,
   requestMediatype,
   requestAttach,
   requestCreateId,
@@ -362,5 +453,8 @@ module.exports = {
   requestTrickle,
   requestStreamingList,
   requestStreamingWatch,
-  requestStreamingStop
+  requestStreamingStop,
+  pushTrickle,
+  setBufferCandidates,
+  setHandleId
 }
