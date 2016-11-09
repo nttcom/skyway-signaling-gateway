@@ -85,18 +85,19 @@ class SkywayConnector extends EventEmitter {
   }
 
 
-  updatePeerConnection(id, params) {
-    this.connections[id] = Object.assign({}, this.connections[id], params);
+  updatePeerConnection(connection_id, params) {
+    this.connections[connection_id] = Object.assign({}, this.connections[connection_id], params);
   }
 
-  sendOffer(id, jsep, type="media") {
+  sendOffer(connection_id, jsep, type="media") {
+    // fixme - type should be determined by parsing jsep.sdp
     let json = {
       src: this.myPeerid,
-      dst: this.connections[id].src,
+      dst: this.connections[connection_id].src,
       payload: {
         sdp: jsep,
         type,
-        connectionId: id,
+        connectionId: connection_id,
         browser: "Chrome"
       },
       type: "OFFER"
@@ -104,13 +105,14 @@ class SkywayConnector extends EventEmitter {
     this.send(json)
   }
 
-  sendAnswer(id, jsep, type="media") {
+  sendAnswer(connection_id, jsep, type="media") {
+    // fixme - type should be determined by parsing jsep.sdp
     let json = {
       src: this.myPeerid,
-      dst: this.connections[id].src,
+      dst: this.connections[connection_id].src,
       payload: {
         browser: "Chrome",
-        connectionId: id,
+        connectionId: connection_id,
         sdp: jsep,
         type
       },
@@ -143,7 +145,7 @@ class SkywayConnector extends EventEmitter {
   }
 
   messageHandlerFromServer(mesg) {
-    let id = mesg.payload && mesg.payload.connectionId
+    let connection_id = mesg.payload && mesg.payload.connectionId
     let src = mesg.src
     let dst = mesg.dst
 
@@ -161,26 +163,27 @@ class SkywayConnector extends EventEmitter {
         // receive OFFER from skyway
         this.emitEvent(mesg)
         let offer = mesg.payload.sdp
-        let type = mesg.payload.type
+        var type = mesg.payload.type
 
-        this.updatePeerConnection(id, {src, dst, offer, type})
-        this.emit('receive/offer', id, offer, type)
+        this.updatePeerConnection(connection_id, {src, dst, offer, type})
+        this.emit('receive/offer', connection_id, offer, type)
         break;
       case 'ANSWER':
         // receive ANSWER from skyway
         this.emitEvent(mesg)
         let answer = mesg.payload.sdp
+        var type = mesg.payload.type
 
-        this.updatePeerConnection(id, {src, dst, answer})
-        this.emit('receive/answer', id, answer)
+        this.updatePeerConnection(connection_id, {src, dst, answer, type})
+        this.emit('receive/answer', connection_id, answer, type)
         break;
       case 'CANDIDATE':
         // receive ANSWER from skyway
         this.emitEvent(mesg)
         let candidate = mesg.payload.candidate
 
-        this.updatePeerConnection(id, {src, dst, candidate})
-        this.emit('receive/candidate', id, candidate)
+        this.updatePeerConnection(connection_id, {src, dst, candidate})
+        this.emit('receive/candidate', connection_id, candidate)
         break;
       default:
         console.warn(`unknown message [${mesg.type}]`)

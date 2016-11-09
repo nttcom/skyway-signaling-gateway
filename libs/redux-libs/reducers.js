@@ -27,10 +27,17 @@ const {
     REQUEST_DESTROY,
     RESPONSE_DESTROY,
     PLUGIN,
+    SET_OFFER_FROM_SKYWAY,
+    SET_ANSWER_FROM_SKYWAY,
+    SET_HANDLE_ID,
+    SET_PLUGIN,
+    SET_BUFFER_CANDIDATES,
+    PUSH_TRICKLE,
 } = require('./actions')
 
-function sessions(state = {}, action) {
-  let session = Object.assign({}, state[action.id], {status: action.type, json: action.json})
+function sessions(state = { connections : {}, lastUpdatedConnection: null}, action) {
+  let connection = Object.assign({}, state.connections[action.connection_id], {status: action.type, json: action.json})
+
   switch (action.type) {
     case REQUEST_CREATE_ID:
     case REQUEST_ATTACH:
@@ -47,7 +54,6 @@ function sessions(state = {}, action) {
     case RESPONSE_TRICKLE_COMPLETED:
     case LONGPOLLING_WEBRTCUP:
     case LONGPOLLING_MEDIA:
-    case LONGPOLLING_HANGUP:
     case LONGPOLLING_KEEPALIVE:
     case REQUEST_DETACH:
     case RESPONSE_DETACH:
@@ -63,25 +69,59 @@ function sessions(state = {}, action) {
     case PLUGIN.STREAMING.LONGPOLLING_STARTED:
     case PLUGIN.STREAMING.LONGPOLLING_STOPPING:
     case PLUGIN.STREAMING.LONGPOLLING_STOPPED:
-      return Object.assign({}, state, {[action.id]: session})
+      break;
+    case SET_PLUGIN:
+      connection = Object.assign({}, connection, {plugin: action.plugin, buffCandidates: []});
+      break;
+    case SET_HANDLE_ID:
+      connection = Object.assign({}, connection, {handle_id: action.handle_id});
+      break;
+    case SET_BUFFER_CANDIDATES:
+      connection = Object.assign({}, connection, {shouldBufferCandidates: action.shouldBufferCandidates});
+      break;
+    case SET_OFFER_FROM_SKYWAY:
+      connection = Object.assign({}, connection, {offer: action.offer, p2p_type: action.p2p_type});
+      break;
+    case SET_ANSWER_FROM_SKYWAY:
+      connection = Object.assign({}, connection, {answer: action.answer, p2p_type: action.p2p_type});
+      break;
+    case PUSH_TRICKLE:
+      connection = Object.assign({}, connection, {buffCandidates: [ ...connection.buffCandidates, action.candidate ]});
+      break;
     case RESPONSE_CREATE_ID:
-      session = Object.assign({}, session, {session_id: action.json.data.id})
-      return Object.assign({}, state, {[action.id]:session})
+      connection = Object.assign({}, connection, {session_id: action.json.data.id})
+      break;
     case RESPONSE_ATTACH:
-      session = Object.assign({}, session, {attach_id: action.json.data.id})
-      return Object.assign({}, state, {[action.id]:session})
+      connection = Object.assign({}, connection, {attach_id: action.json.data.id})
+      break;
     case REQUEST_MEDIATYPE:
-      session = Object.assign({}, session, {media_type: action.json.body})
-      return Object.assign({}, state, {[action.id]:session})
+      connection = Object.assign({}, connection, {media_type: action.json.body})
+      break;
     case LONGPOLLING_OFFER:
-      session = Object.assign({}, session, {offer: action.json.jsep})
-      return Object.assign({}, state, {[action.id]:session})
+      connection = Object.assign({}, connection, {offer: action.json.jsep})
+      break;
     case LONGPOLLING_ANSWER:
-      session = Object.assign({}, session, {answer: action.json.jsep})
-      return Object.assign({}, state, {[action.id]:session})
+      connection = Object.assign({}, connection, {answer: action.json.jsep})
+      break;
+    case LONGPOLLING_HANGUP:
+      delete state.connections[action.connection_id]
+      var connections = Object.assign({}, state.connections);
+
+      return Object.assign({}, state, {
+        lastUpdatedConnection: action.connection_id,
+        connections
+      })
     default:
       return state
   }
+
+  var connections = Object.assign({}, state.connections, { [action.connection_id]: connection });
+
+  return Object.assign({}, state, {
+    lastUpdatedConnection: action.connection_id,
+    connections
+  })
+
 }
 
 const reducer = combineReducers({
