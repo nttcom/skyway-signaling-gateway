@@ -3,12 +3,24 @@
 const WebSocket = require("ws")
 const EventEmitter = require("events").EventEmitter
 
+const { setPairOfPeerids } = require('../redux-libs/actions')
+
 const util = require("../miscs/util")
 
 const CONF = require('../../conf/skyway.json');
 
 class SkywayConnector extends EventEmitter {
-  constructor(params){
+  /**
+   * constructor
+   * 
+   * @param {object} paramter
+   * @param {string} apikey of skyway - apikey (required)
+   * @param {string} origin - dummy origin for SSG e.g. 'http://localhost' (required)
+   * @param {string} peerid - peerid of ssg (optional)
+   * @param {object} store - SSG store
+   * 
+   */
+  constructor(params, store){
     super();
     // configure static parameter
     this.scheme     = CONF.scheme     || "wss://";
@@ -23,7 +35,7 @@ class SkywayConnector extends EventEmitter {
     this.token   = util.randomTokenForSkyway();
     this.brPeerid = null;
 
-    this.connections = {};
+    this.store = store;
 
     // setup url for SkyWay server
     this.serverUrl = [
@@ -58,7 +70,34 @@ class SkywayConnector extends EventEmitter {
       this.setSocketHandler();
     });
   }
+  
+  /**
+   * get client peer id. it will be retrieved from ssg store
+   * 
+   * @param {string} connection_id - connection id
+   */
+  getClientPeerid(connection_id){
+    let {connections} = this.store.getState().sessions
 
+    return connections[connection_id].peerids.client
+  }
+  
+  /**
+   * get SSG peer id. it will be retrieved from ssg store
+   * 
+   * @param {string} connection_id - connection id
+   */
+  getSSGPeerid(connection_id){
+    let {connections} = this.store.getState().sessions
+
+    return connections[connection_id].peerids.ssg
+  }
+
+
+  /**
+   * set websocket handler for skyway signaling server
+   * 
+   */
   setSocketHandler(){
     // unfortunately, error happened
     this.socket.addEventListener("error", (err) => {
@@ -84,16 +123,19 @@ class SkywayConnector extends EventEmitter {
     });
   }
 
-
-  updatePeerConnection(connection_id, params) {
-    this.connections[connection_id] = Object.assign({}, this.connections[connection_id], params);
-  }
-
+  /**
+   * send offer message to skyway signaling server
+   * 
+   * @param {string} connection_id - connection id
+   * @param {object} jsep - jsep object for OFFER
+   * @param {string} type - type of stream. "media" or "data"
+   * 
+   */
   sendOffer(connection_id, jsep, type="media") {
     // fixme - type should be determined by parsing jsep.sdp
     let json = {
       src: this.myPeerid,
-      dst: this.connections[connection_id].src,
+      dst: this.getClientPeerid(connection_id),
       payload: {
         sdp: jsep,
         type,
@@ -105,11 +147,18 @@ class SkywayConnector extends EventEmitter {
     this.send(json)
   }
 
+  /**
+   * send answer message to skyway signaling server
+   * 
+   * @param {string} connection_id - connection id
+   * @param {object} jsep - jsep object of ANSWER message
+   * @param {string} type - stream type. "media" or "data"
+   */
   sendAnswer(connection_id, jsep, type="media") {
     // fixme - type should be determined by parsing jsep.sdp
     let json = {
       src: this.myPeerid,
-      dst: this.connections[connection_id].src,
+      dst: this.getClientPeerid(connection_id),
       payload: {
         browser: "Chrome",
         connectionId: connection_id,
@@ -121,15 +170,19 @@ class SkywayConnector extends EventEmitter {
     this.send(json)
   }
 
-  sendTricle() {
-
-  }
-
+  /**
+   * send PONG message to skyway signaling server. It will be invoked when PING received.
+   */
   sendPong() {
     let json = {type: "PONG"}
     this.send(json)
   }
 
+  /**
+   * send message to SkyWay signaling server
+   * 
+   * @param {object} json - arbitrary json message
+   */
   send(json) {
     // send message to Skyway server
     try {
@@ -140,16 +193,31 @@ class SkywayConnector extends EventEmitter {
     }
   }
 
+  /**
+   * emit message via EventEmitter
+   *
+   * @param {object} mesg - arbitrary message object, it must have mesg.type
+   */
   emitEvent(mesg) {
-    this.emit('event', mesg.type, mesg)
+    if( typeof(mesg) === 'object' && mesg.type ) this.emit('event', mesg.type, mesg)
   }
 
+  /**
+   * handle signaling message from skyway signaling server
+   * 
+   * @param {object} mesg - signaling message object
+   */
   messageHandlerFromServer(mesg) {
+    if(typeof(mesg) !== 'object') return;
+    
     let connection_id = mesg.payload && mesg.payload.connectionId
     let src = mesg.src
     let dst = mesg.dst
+    let mesg_type = mesg.type
+    
+    if(!connection_id || !src || !dst || !mesg_type ) return;
 
-    switch(mesg.type) {
+    switch(mesg_type) {
       case 'OPEN':
         // connection to skyway established. this doesn't mean that peer opened
         this.emitEvent(mesg)
@@ -165,7 +233,7 @@ class SkywayConnector extends EventEmitter {
         let offer = mesg.payload.sdp
         var type = mesg.payload.type
 
-        this.updatePeerConnection(connection_id, {src, dst, offer, type})
+        this.store.dispatch(setPairOfPeerids(connection_id, src, dst))
         this.emit('receive/offer', connection_id, offer, type)
         break;
       case 'ANSWER':
@@ -174,7 +242,7 @@ class SkywayConnector extends EventEmitter {
         let answer = mesg.payload.sdp
         var type = mesg.payload.type
 
-        this.updatePeerConnection(connection_id, {src, dst, answer, type})
+        this.store.dispatch(setPairOfPeerids(connection_id, src, dst))
         this.emit('receive/answer', connection_id, answer, type)
         break;
       case 'CANDIDATE':
@@ -182,7 +250,6 @@ class SkywayConnector extends EventEmitter {
         this.emitEvent(mesg)
         let candidate = mesg.payload.candidate
 
-        this.updatePeerConnection(connection_id, {src, dst, candidate})
         this.emit('receive/candidate', connection_id, candidate)
         break;
       default:

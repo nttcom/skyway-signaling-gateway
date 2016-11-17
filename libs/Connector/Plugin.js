@@ -1,5 +1,5 @@
 /**
- * skywayiot plugin Connector
+ * skywayiot plugin Connector to handle data channel message
  *
  */
 const EventEmitter = require("events").EventEmitter
@@ -11,7 +11,16 @@ const logger = log4js.getLogger('PluginConnector')
 
 const CONF = require('../../conf/janus.json')
 
+/**
+ * Skyway IoT plugin connector for Janus Gateway.
+ * It will handle data channel message.
+ * 
+ */
 class PluginConnector extends EventEmitter {
+  /**
+   * constructor
+   * 
+   */
   constructor(){
     super()
 
@@ -24,16 +33,23 @@ class PluginConnector extends EventEmitter {
     this.sender = dgram.createSocket('udp4')
     this.receiver = dgram.createSocket('udp4')
 
-    this.bindReceiver();
+    this.start();
   }
 
-  bindReceiver() {
+  /**
+   * start udp server
+   * 
+   */
+  start() {
     this.receiver.bind({address: "0.0.0.0", port: this.receiver_port}, () => {
       console.log(`succeeded to bind port ${this.receiver_port}`);
       this.setRecieveHandler();
     })
   }
 
+  /**
+   * set udp message handler
+   */
   setRecieveHandler() {
     this.receiver.on('error', err => this.emit("error", err));
     this.receiver.on('message', (buff, rinfo) => {
@@ -46,6 +62,12 @@ class PluginConnector extends EventEmitter {
 
   }
 
+  /**
+   * send message via udp
+   * 
+   * @param {string} id - handle_id in string format
+   * @param {mesg} mesg - arbitorary mesg 
+   */
   send(id /* hex string */, mesg) {
     let handle_id = new Buffer(id, 'hex')
 

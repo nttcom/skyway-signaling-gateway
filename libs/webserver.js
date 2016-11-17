@@ -14,11 +14,23 @@ let httpsServer = https.createServer({
   cert:  fs.readFileSync(__dirname+'/../keys/server.crt')
 }, app)
 
-
+/**
+ * WebServer class
+ * 
+ */
 class WebServer {
+  /**
+   * constructor
+   * 
+   */
   constructor(){
   }
 
+  /**
+   * start web server
+   * 
+   * @param {integer} port - port number (default: 3000)
+   */
   start(port = 3000) {
     httpsServer.listen(port, () => logger.info(`HTTPS server listening on port ${port}`))
   }

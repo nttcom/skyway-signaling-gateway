@@ -32,9 +32,18 @@ const {
     SET_HANDLE_ID,
     SET_PLUGIN,
     SET_BUFFER_CANDIDATES,
+    SET_PAIR_OF_PEERIDS,
     PUSH_TRICKLE,
 } = require('./actions')
 
+
+/**
+ * update sessions from action message
+ * 
+ * @param {object} state - previous session state
+ * @param {object} action - action object
+ * 
+ */
 function sessions(state = { connections : {}, lastUpdatedConnection: null}, action) {
   let connection = Object.assign({}, state.connections[action.connection_id], {status: action.type, json: action.json})
 
@@ -69,6 +78,9 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
     case PLUGIN.STREAMING.LONGPOLLING_STARTED:
     case PLUGIN.STREAMING.LONGPOLLING_STOPPING:
     case PLUGIN.STREAMING.LONGPOLLING_STOPPED:
+      break;
+    case SET_PAIR_OF_PEERIDS:
+      connection = Object.assign({}, connection, { peerids: { client: action.client_peer_id, ssg: action.ssg_peer_id }})
       break;
     case SET_PLUGIN:
       connection = Object.assign({}, connection, {plugin: action.plugin, buffCandidates: []});
@@ -124,6 +136,10 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
 
 }
 
+/**
+ * reducder setting
+ * 
+ */
 const reducer = combineReducers({
   sessions
 })

@@ -11,11 +11,20 @@ let extInterface = new ExtInterface()
 
 
 const DatachannelController = {
+  /**
+   * start initialize then set Handler
+   * 
+   * @param {SignalingController} signalingController
+   */
   start(signalingController) {
     this.signaling_controller = signalingController
     this.setHandler();
   },
 
+  /**
+   * set plugin and external interface Handlers
+   * 
+   */
   setHandler() {
     this._setPluginHandler();
     this._setExtHandler();

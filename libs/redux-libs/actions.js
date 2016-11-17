@@ -21,6 +21,7 @@ const SET_ANSWER_FROM_SKYWAY = 'SET_ANSWER_FROM_SKYWAY'
 const SET_PLUGIN = 'SET_PLUGIN'
 const SET_BUFFER_CANDIDATES = 'SET_BUFFER_CANDIDATES'
 const SET_HANDLE_ID = 'SET_HANDLE_ID'
+const SET_PAIR_OF_PEERIDS = 'SET_PAIR_OF_PEERIDS'
 
 const PUSH_TRICKLE = 'PUSH_TRICKLE'
 
@@ -83,6 +84,111 @@ const EXPECTS = {
   'PLUGIN/STREAMING/REQUEST_STOP': PLUGIN.STREAMING.RESPONSE_STOP,
 }
 
+///////////////////////////////////////////////////////////////
+// category : set status
+//  
+///////////////////////////////////////////////////////////////
+
+
+/**
+ * This function will be invoked when OFFER received from skyway.
+ * This is just for change status.
+ * 
+ * @param {string} connection_id - connection id
+ * @param {object} offer - jsep object of offer
+ * @param {string} p2p_type - "media" or "data"
+ * 
+ */
+function setOfferFromSkyway(connection_id, offer, p2p_type) {
+  return {
+    type: SET_OFFER_FROM_SKYWAY,
+    connection_id,
+    offer,
+    p2p_type
+  }
+}
+
+/**
+ * This function will be invoked when ANSWER received from skyway.
+ * This is just for change status.
+ * 
+ * @param {string} connection_id - connection id
+ * @param {object} answer - jsep object of answer
+ * @param {string} p2p_type - "media" or "answer"
+ * 
+ */
+function setAnswerFromSkyway(connection_id, answer, p2p_type) {
+  return {
+    type: SET_ANSWER_FROM_SKYWAY,
+    connection_id,
+    answer,
+    p2p_type
+  }
+}
+
+/**
+ * This function will be invoked when new peer connection establish started.
+ * This will update the state of skyway's src and dest peerid
+ *
+ * @param {string} connection_id - connection id
+ * @param {string} client_peer_id - client's peer id
+ * @param {string} ssg_peer_id - ssg's peer id
+ */
+function setPairOfPeerids(connection_id, client_peer_id, ssg_peer_id) {
+  return {
+    type: SET_PAIR_OF_PEERIDS,
+    connection_id,
+    client_peer_id,
+    ssg_peer_id
+  }
+}
+
+/**
+ * This function will be invoked when handle_id will be given from Janus Gateway skywayiot plugin (identifier of data channel session).
+ * This is just for change status.
+ * 
+ * @param {string} connection_id - connection id
+ * @param {string} handle_id - handle id (identifier of data channel session) 
+ */
+function setHandleId(connection_id, handle_id) {
+  return {
+    type: SET_HANDLE_ID,
+    connection_id,
+    handle_id
+  }
+}
+
+/**
+ * This function will be invoked in initialization process to attach Janus Gateway.
+ * This is for storing plugin name of this connection.
+ * 
+ * @param {string} connection_id - connection id
+ * @param {plugin} plugin - name of plugin ("skywayiot" or "streaming")
+ */
+function setPlugin(connection_id, plugin) {
+  return {
+    type: SET_PLUGIN,
+    connection_id,
+    plugin
+  }
+}
+
+/**
+ * This function will be invoked in initialization process to attach Janus Gateway.
+ * This will create buffer space for ice trickle
+ * 
+ * @param {string} connection_id - connection id
+ * @param {boolean} shouldBufferCandidates - flag indicating buffering candidates
+ * 
+ */
+function setBufferCandidates(connection_id, flag) {
+  return {
+    type: SET_BUFFER_CANDIDATES,
+    connection_id,
+    shouldBufferCandidates: flag
+  }
+}
+
 /**
  * This will be invoked when request will be sent by fetchJanus()
  * 
@@ -120,6 +226,212 @@ function receiveJanus(connection_id, janus_type, transaction, jsonBody) {
   }
 }
 
+
+
+
+
+///////////////////////////////////////////////////////////////
+// category: fetch actions
+//
+///////////////////////////////////////////////////////////////
+
+/**
+ * Start establishing connection to Janus Gateway. This function is used for skywayiot-plugin
+ * 
+ * @param {string} connection_id - connection id
+ * @param {object} params
+ * @param {object} params.offer - jsep object for offer
+ * @param {string} params.p2p_type - "media" or "data"
+ * @param {string} params.plugin - "skywayiot"
+ * @param {boolean} params.shouldBufferCandidates - flag for buffering canidates
+ */
+function requestCreateId(connection_id, params = {
+  offer: null,
+  p2p_type: null,
+  plugin: null,
+  shouldBufferCandidates: true
+}) {
+  return (dispatch) => {
+    dispatch(setPlugin(connection_id, params.plugin));
+    dispatch(setOfferFromSkyway(connection_id, params.offer, params.p2p_type));
+    dispatch(setBufferCandidates(connection_id, params.shouldBufferCandidates));
+    dispatch(fetchJanus(connection_id, REQUEST_CREATE_ID, {"janus": "create"}))
+  }
+}
+
+/**
+ * Start attaching plugin
+ * 
+ * @param {string} connection_id - connection id
+ * @param {string} plugin - "skywayiot" or "streaming"
+ * 
+ */
+function requestAttach(connection_id, plugin) {
+  return (dispatch, getState) => {
+    dispatch(fetchJanus(connection_id, REQUEST_ATTACH, {
+      janus: "attach",
+      plugin: plugin,
+    }))
+  }
+}
+
+/**
+ * Set Mediatype for skywayiot-plugin
+ * 
+ * @param {string} connection_id - connection id
+ * @param {object} media_type
+ * @param {boolean} media_type.audio - enable audio streaming
+ * @param {boolean} media_type.video - enable video streaming
+ * 
+ */
+function requestMediatype(connection_id, media_type = {audio: true, video: true}) {
+  return dispatch => {
+    dispatch(fetchJanus(connection_id, REQUEST_MEDIATYPE, {
+      janus: "message",
+      body: media_type
+    }))
+  }
+}
+
+/**
+ * Send offer request from skyway to Janus Gateway (for skywayiot plugin). It must invoked after plugin attach completed
+ * 
+ * @param {string} connection_id - connection id
+ * @param {object} media_type
+ * @param {boolean} media_type.audio - enable audio
+ * @param {boolean} media_type.video - enable video
+ * @param {objcet} jsep - jsep object of offer 
+ */
+function requestOffer(connection_id, media_type = {audio: true, video: true}, jsep) {
+  return dispatch => {
+    dispatch(fetchJanus(connection_id, REQUEST_OFFER, {
+      janus: "message",
+      body: media_type,
+      jsep
+    }))
+  }
+}
+
+/**
+ * Send answer request from skyway to Janus Gateway (for streaming plugin) 
+ *
+ * @param {string} connection_id - connection id
+ * @param {object} params
+ * @param {object} params.answer - jsep object of answer
+ * @param {string} params.p2p_type - "media" or "data"
+ * @param {boolean} params.shouldBufferCandidate - flag for buffering candidates
+ * 
+ */
+function requestAnswer(connection_id, params = {
+  answer: null,
+  p2p_type: null,
+  shouldBufferCandidates: false
+}) {
+  return dispatch => {
+    dispatch(setAnswerFromSkyway(connection_id, params.answer, params.p2p_type))
+    dispatch(setBufferCandidates(connection_id, params.shouldBufferCandidates))
+    dispatch(fetchJanus(connection_id, REQUEST_ANSWER, {
+      janus: "message",
+      body: {
+        request: "start"
+      },
+      jsep: params.answer
+    }))
+  }
+}
+
+/**
+ * Push ICE candidate to buffer
+ * 
+ * @param {string} connection_id - connection id
+ * @param {object} candidate - jsep object of ice candidate
+ * 
+ */
+function pushTrickle(connection_id, candidate) {
+  return {
+    type: PUSH_TRICKLE,
+    connection_id,
+    candidate
+  }
+}
+
+/**
+ * Send ICE candidate to JanusGateway
+ * 
+ * @param {string} connection_id - connection id
+ * @param {object} jsep object of ice candidate
+ * 
+ */
+function requestTrickle(connection_id, candidate) {
+  return dispatch => {
+    dispatch(fetchJanus(connection_id, REQUEST_TRICKLE, {
+      janus: "trickle",
+      candidate
+    }))
+  }
+}
+
+/**
+ * Send streaming list request to Janus Gateway. This is used for streaming plugin.
+ * 
+ * @param {string} connection_id - connection id
+ * 
+ */
+function requestStreamingList(connection_id) {
+  return dispatch => {
+    dispatch(fetchJanus(connection_id, PLUGIN.STREAMING.REQUEST_LIST, {
+      janus: "message",
+      body: {
+        request: "list"
+      }
+    }))
+  }
+}
+
+/**
+ * Send watch request to Janus Gateway. This is used for streaming plugin.
+ * 
+ * @param {string} connection_id - connection id
+ * @param {integer} stream_id - stream id
+ * 
+ */
+function requestStreamingWatch(connection_id, stream_id) {
+  return dispatch => {
+    dispatch(fetchJanus(connection_id, PLUGIN.STREAMING.REQUEST_WATCH, {
+      janus: "message",
+      body: {
+        request: "watch",
+        id: stream_id
+      }
+    }))
+  }
+}
+
+/**
+ * Send streaming stop request to Janus gateway. This is for streaming plugin.
+ * 
+ * @param {string} connection_id - connection id
+ * 
+ */
+function requestStreamingStop(connection_id) {
+  return dispatch => {
+    dispatch(fetchJanus(connection_id, PLUGIN.STREAMING.REQUEST_STOP, {
+      janus: "message",
+      body : {
+        request: "stop"
+      }
+    }))
+  }
+}
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+// category: network handlers
+//
+/////////////////////////////////////////////////////////////////////
+
 /**
  * This function is to process event message from Janus Gateway.
  * Event messages are offer, answer, webrtcup etc.
@@ -131,6 +443,8 @@ function receiveJanus(connection_id, janus_type, transaction, jsonBody) {
  */
 function receiveLongPolling(connection_id, json) {
   if(json.janus === "event") {
+    // find action type, based on json message received.
+    // 
     if(json.plugindata && json.transaction && json.jsep && json.jsep.type === "answer") {
       // ANSER event
       return {
@@ -225,6 +539,7 @@ function receiveLongPolling(connection_id, json) {
   }
 }
 
+
 /**
  * This is for to handle event via long polling interface from Janus.
  * This function will be repeatedly called by itself until session would be termintated.
@@ -295,7 +610,7 @@ function fetchJanus(connection_id, janus_type, jsonBody) {
     // create request payload
     jsonBody = Object.assign({}, jsonBody, {transaction})
     
-    // dispatch to refresh current status
+    // dispatch requestJanus to refresh current status
     dispatch(requestJanus(connection_id, janus_type, transaction, jsonBody))
 
     // setup header for this fetch
@@ -334,161 +649,6 @@ function fetchJanus(connection_id, janus_type, jsonBody) {
   }
 }
 
-// exports
-function setOfferFromSkyway(connection_id, offer, p2p_type) {
-  return {
-    type: SET_OFFER_FROM_SKYWAY,
-    connection_id,
-    offer,
-    p2p_type
-  }
-}
-
-function setAnswerFromSkyway(connection_id, answer, p2p_type) {
-  return {
-    type: SET_ANSWER_FROM_SKYWAY,
-    connection_id,
-    answer,
-    p2p_type
-  }
-}
-
-function setHandleId(connection_id, handle_id) {
-  return {
-    type: SET_HANDLE_ID,
-    connection_id,
-    handle_id
-  }
-}
-
-function setPlugin(connection_id, plugin) {
-  return {
-    type: SET_PLUGIN,
-    connection_id,
-    plugin
-  }
-}
-
-function setBufferCandidates(connection_id, flag) {
-  return {
-    type: SET_BUFFER_CANDIDATES,
-    connection_id,
-    shouldBufferCandidates: flag
-  }
-}
-
-function requestCreateId(connection_id, params = {
-  offer: null,
-  p2p_type: null,
-  plugin: null,
-  shouldBufferCandidates: true
-}) {
-  return (dispatch) => {
-    dispatch(setPlugin(connection_id, params.plugin));
-    dispatch(setOfferFromSkyway(connection_id, params.offer, params.p2p_type));
-    dispatch(setBufferCandidates(connection_id, params.shouldBufferCandidates));
-    dispatch(fetchJanus(connection_id, REQUEST_CREATE_ID, {"janus": "create"}))
-  }
-}
-
-function requestAttach(connection_id, plugin) {
-  return (dispatch, getState) => {
-    dispatch(fetchJanus(connection_id, REQUEST_ATTACH, {
-      janus: "attach",
-      plugin: plugin,
-    }))
-  }
-}
-
-
-function requestMediatype(connection_id, media_type = {audio: true, video: true}) {
-  return dispatch => {
-    dispatch(fetchJanus(connection_id, REQUEST_MEDIATYPE, {
-      janus: "message",
-      body: media_type
-    }))
-  }
-}
-
-
-function requestOffer(connection_id, media_type = {audio: true, video: true}, jsep) {
-  return dispatch => {
-    dispatch(fetchJanus(connection_id, REQUEST_OFFER, {
-      janus: "message",
-      body: media_type,
-      jsep
-    }))
-  }
-}
-
-function requestAnswer(connection_id, params = {
-  answer: null,
-  p2p_type: null,
-  shouldBufferCandidates: false
-}) {
-  return dispatch => {
-    dispatch(setAnswerFromSkyway(connection_id, params.answer, params.p2p_type))
-    dispatch(setBufferCandidates(connection_id, params.shouldBufferCandidates))
-    dispatch(fetchJanus(connection_id, REQUEST_ANSWER, {
-      janus: "message",
-      body: {
-        request: "start"
-      },
-      jsep: params.answer
-    }))
-  }
-}
-
-function pushTrickle(connection_id, candidate) {
-  return {
-    type: PUSH_TRICKLE,
-    connection_id,
-    candidate
-  }
-}
-
-function requestTrickle(connection_id, candidate) {
-  return dispatch => {
-    dispatch(fetchJanus(connection_id, REQUEST_TRICKLE, {
-      janus: "trickle",
-      candidate
-    }))
-  }
-}
-
-function requestStreamingList(connection_id) {
-  return dispatch => {
-    dispatch(fetchJanus(connection_id, PLUGIN.STREAMING.REQUEST_LIST, {
-      janus: "message",
-      body: {
-        request: "list"
-      }
-    }))
-  }
-}
-
-function requestStreamingWatch(connection_id, stream_id) {
-  return dispatch => {
-    dispatch(fetchJanus(connection_id, PLUGIN.STREAMING.REQUEST_WATCH, {
-      janus: "message",
-      body: {
-        request: "watch",
-        id: stream_id
-      }
-    }))
-  }
-}
-
-function requestStreamingStop(connection_id) {
-  return dispatch => {
-    dispatch(fetchJanus(connection_id, PLUGIN.STREAMING.REQUEST_STOP, {
-      janus: "message",
-      body : {
-        request: "stop"
-      }
-    }))
-  }
-}
 
 
 module.exports = {
@@ -526,6 +686,7 @@ module.exports = {
   SET_HANDLE_ID,
   SET_PLUGIN,
   SET_BUFFER_CANDIDATES,
+  SET_PAIR_OF_PEERIDS,
   PUSH_TRICKLE,
   requestMediatype,
   requestAttach,
@@ -538,5 +699,6 @@ module.exports = {
   requestStreamingStop,
   pushTrickle,
   setBufferCandidates,
-  setHandleId
+  setHandleId,
+  setPairOfPeerids
 }

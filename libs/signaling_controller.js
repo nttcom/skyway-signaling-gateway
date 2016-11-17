@@ -26,21 +26,25 @@ const {
   pushTrickle,
   setBufferCandidates,
   setHandleId,
+  setPairOfPeerids
 } = require('./redux-libs/actions')
 const util = require('./miscs/util')
 
 const logger = log4js.getLogger('signaling_controller')
 
 class SignalingController extends EventEmitter {
-  constructor(janusStore, Skyway) {
-    super(janusStore, Skyway);
+  /**
+   * constructor:
+   * initialize skyway and ssgStore, then setup handlers
+   * 
+   */
+  constructor(ssgStore, Skyway) {
+    super(ssgStore, Skyway);
 
     this.my_peerid = process.env.PEERID || CONF['peerid'] || null
 
-    this.streaming_connectionids = {}
-
-    this.janusStore = janusStore // store for Janus
-    this.skyway = new Skyway({option:{peerid: this.my_peerid}})
+    this.ssgStore = ssgStore // store for Janus
+    this.skyway = new Skyway({option:{peerid: this.my_peerid}}, ssgStore)
 
     this.skyway.on("opened", ev => {
       this.setSkywayHandler()
@@ -48,9 +52,13 @@ class SignalingController extends EventEmitter {
     })
   }
 
+  /**
+   * set skyway handlers
+   * 
+   */
   setSkywayHandler() {
     this.skyway.on("receive/offer", (connection_id, offer, p2p_type) => {
-      this.janusStore.dispatch(requestCreateId(connection_id, {
+      this.ssgStore.dispatch(requestCreateId(connection_id, {
         offer,
         p2p_type,
         plugin: "skywayiot",
@@ -59,7 +67,7 @@ class SignalingController extends EventEmitter {
     })
 
     this.skyway.on("receive/answer", (connection_id, answer, p2p_type) => {
-      this.janusStore.dispatch(requestAnswer(connection_id, {
+      this.ssgStore.dispatch(requestAnswer(connection_id, {
         answer,
         p2p_type,
         shouldBufferCandidates: false
@@ -67,23 +75,27 @@ class SignalingController extends EventEmitter {
     })
 
     this.skyway.on("receive/candidate", (connection_id, candidate) => {
-      // before LONGPOLLING_ANSWER received, We buffer candidate
-      let { connections } = this.janusStore.getState().sessions
+      // before receiveing LONGPOLLING_ANSWER, We buffer candidate
+      let { connections } = this.ssgStore.getState().sessions
       let connection = connections[connection_id]
 
 
       if(connection.shouldBufferCandidates) {
-        this.janusStore.dispatch(pushTrickle(connection_id, candidate))
+        this.ssgStore.dispatch(pushTrickle(connection_id, candidate))
       } else {
-        this.janusStore.dispatch(requestTrickle(connection_id, candidate))
+        this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
       }
     })
   }
 
+  /**
+   * set janus handlers
+   * 
+   */
   setJanusHandler() {
-    this.janusStore.subscribe(() => {
+    this.ssgStore.subscribe(() => {
       // obtain current session state
-      let { connections, lastUpdatedConnection } = this.janusStore.getState().sessions;
+      let { connections, lastUpdatedConnection } = this.ssgStore.getState().sessions;
       let connection_id = lastUpdatedConnection
 
       if(!!lastUpdatedConnection === false) return;
@@ -98,20 +110,20 @@ class SignalingController extends EventEmitter {
       let is_media = connection.p2p_type === "media"
       switch(connection.status) {
         case RESPONSE_CREATE_ID:
-          this.janusStore.dispatch(requestAttach(connection_id, `janus.plugin.${connection.plugin}`))
+          this.ssgStore.dispatch(requestAttach(connection_id, `janus.plugin.${connection.plugin}`))
           break;
         case RESPONSE_ATTACH:
           if(connection.plugin === "streaming") {
-            this.janusStore.dispatch(requestStreamingList(connection_id))
+            this.ssgStore.dispatch(requestStreamingList(connection_id))
           } else {
-            this.janusStore.dispatch(requestMediatype(connection_id, {video: is_media, audio: is_media}))
+            this.ssgStore.dispatch(requestMediatype(connection_id, {video: is_media, audio: is_media}))
           }
           break;
         case PLUGIN.STREAMING.RESPONSE_LIST:
-          this.janusStore.dispatch(requestStreamingWatch(connection_id, 1))
+          this.ssgStore.dispatch(requestStreamingWatch(connection_id, 1))
           break;
         case LONGPOLLING_ATTACHED:
-          this.janusStore.dispatch(requestOffer(connection_id, {video: is_media, audio: is_media}, connection.offer))
+          this.ssgStore.dispatch(requestOffer(connection_id, {video: is_media, audio: is_media}, connection.offer))
           break;
         case LONGPOLLING_OFFER:
           this.skyway.sendOffer(connection_id, connection.offer, "media")
@@ -120,11 +132,11 @@ class SignalingController extends EventEmitter {
           this.skyway.sendAnswer(connection_id, connection.answer, connection.p2p_type)
 
           // lift restriction to buffer candidates
-          this.janusStore.dispatch(setBufferCandidates(connection_id, false))
+          this.ssgStore.dispatch(setBufferCandidates(connection_id, false))
 
           // dispatch buffered candidates
           connection.buffCandidates.forEach( candidate =>
-            this.janusStore.dispatch(requestTrickle(connection_id, candidate))
+            this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
           )
           break;
         default:
@@ -133,6 +145,12 @@ class SignalingController extends EventEmitter {
     })
   }
 
+  /**
+   * start streaming plugin
+   * 
+   * @param {string} handle_id - handle id (identifier for data channel)
+   * @param {string} src - peerid of client
+   */
   startStreaming(handle_id, src) {
     if(this.skyway.status !== "opened" ) {
       logger.error( "skyway is not opened" );
@@ -143,10 +161,13 @@ class SignalingController extends EventEmitter {
 
     // since, using streaming plugin does not initiate peer from browser,
     // so we will use connection object in SkyWay connector, explicitly
-    this.skyway.updatePeerConnection(connection_id, { src, dst: this.my_peerid })
+    let client_peer_id = src
+    let ssg_peer_id = this.my_peerid
+    
+    this.ssgStore.dispatch(setPairOfPeerids(connection_id, client_peer_id, ssg_peer_id));
 
-    this.janusStore.dispatch(setHandleId(connection_id, handle_id));
-    this.janusStore.dispatch(requestCreateId(connection_id, {
+    this.ssgStore.dispatch(setHandleId(connection_id, handle_id));
+    this.ssgStore.dispatch(requestCreateId(connection_id, {
       offer: null,
       p2p_type: "media",
       plugin: "streaming",
@@ -154,6 +175,12 @@ class SignalingController extends EventEmitter {
     }))
   }
 
+  /**
+   * stop streaming plugin
+   * 
+   * @param {string} handle_id - handle id (identifier for data channel)
+   * 
+   */
   stopStreaming(handle_id) {
     if(this.skyway.status !== 'opened') {
       logger.error( "skyway is not opened" )
@@ -161,16 +188,24 @@ class SignalingController extends EventEmitter {
     }
     let connection_id = this.getConnectionId(handle_id)
 
-    if(connection_id !== "") this.janusStore.dispatch(requestStreamingStop(connection_id))
+    if(connection_id !== "") this.ssgStore.dispatch(requestStreamingStop(connection_id))
   }
 
+  /**
+   * get connection id from handle_id
+   * 
+   * @param {string} handle_id - handle id (identifier for data channel)
+   */
   getConnectionId(handle_id) {
-    let { connections } = this.janusStore.getState().sessions
+    let { connections } = this.ssgStore.getState().sessions
 
+    // search connection_id for handle_id. then return
     for( let connection_id in connections ) {
       let connection = connections[connection_id];
       if(connection.handle_id === handle_id) return connection_id
     }
+    
+    // when connection_id is not found, we'll return ""
     return ""
   }
 }

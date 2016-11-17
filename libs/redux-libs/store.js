@@ -1,8 +1,3 @@
-/**
- * entry point : index.js
- *
- */
-
 const { createStore, applyMiddleware } = require('redux')
 const thunkMiddleware = require('redux-thunk').default
 const rootReducer = require('./reducers')

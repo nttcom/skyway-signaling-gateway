@@ -14,7 +14,16 @@ const logger = log4js.getLogger('ExtInterface')
 const CONF = require('../../conf/janus.json')
 const port = CONF['external']['tcp_port']
 
+
+/**
+ * External TCP interface for 3rd party application
+ * 
+ */
 class ExtInterface extends EventEmitter {
+  /**
+   * constuctor
+   * 
+   */
   constructor() {
     super();
 
@@ -22,6 +31,10 @@ class ExtInterface extends EventEmitter {
     this.start()
   }
 
+  /**
+   * start tcp server
+   * 
+   */
   start() {
     net.createServer( socket => {
       this.clients.push(socket)
@@ -38,6 +51,12 @@ class ExtInterface extends EventEmitter {
     }).listen(port)
   }
 
+  /**
+   * send message to 3rd party process
+   * 
+   * @param {string} id - handle id in string format
+   * @param {object} binMesg - arbitorary message object
+   */
   send(id /* hex string */, binMesg) {
     let handle_id = new Buffer(id)
     let len = handle_id.length + binMesg.length
