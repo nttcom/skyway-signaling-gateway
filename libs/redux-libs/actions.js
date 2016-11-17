@@ -83,7 +83,15 @@ const EXPECTS = {
   'PLUGIN/STREAMING/REQUEST_STOP': PLUGIN.STREAMING.RESPONSE_STOP,
 }
 
-// actions
+/**
+ * This will be invoked when request will be sent by fetchJanus()
+ * 
+ * @param {string} connection_id - connection id
+ * @param {string} janus_type - type of request message
+ * @param {string} transaction - transaction id
+ * @param {object} jsonBody - request payload
+ * 
+ */
 function requestJanus(connection_id, janus_type, transaction, jsonBody) {
   return {
     type: janus_type,
@@ -93,60 +101,87 @@ function requestJanus(connection_id, janus_type, transaction, jsonBody) {
   }
 }
 
-function receiveJanus(connection_id, janus_type, transaction, json) {
+/**
+ * This will be called when response received from Janus. 
+ * Called in fetchJanus()
+ * 
+ * @param {string} connection_id - connection id
+ * @param {string} janus_type - type of response message
+ * @param {string} transaction - transaction id
+ * @param {object} jsonBody - response payload
+ * 
+ */
+function receiveJanus(connection_id, janus_type, transaction, jsonBody) {
   return {
     type: janus_type,
     connection_id,
     transaction,
-    json
+    json: jsonBody
   }
 }
 
+/**
+ * This function is to process event message from Janus Gateway.
+ * Event messages are offer, answer, webrtcup etc.
+ * It will be called inside of startLongPolling()
+ * 
+ * @param {string} connection_id - connection id
+ * @param {object} json - event message payload
+ * 
+ */
 function receiveLongPolling(connection_id, json) {
   if(json.janus === "event") {
     if(json.plugindata && json.transaction && json.jsep && json.jsep.type === "answer") {
+      // ANSER event
       return {
         type: LONGPOLLING_ANSWER,
         connection_id,
         json
       }
     } else if(json.plugindata && json.transaction && json.jsep && json.jsep.type === "offer") {
+      // OFFER event
       return {
         type: LONGPOLLING_OFFER,
         connection_id,
         json
       }
     } else if(json.plugindata && json.transaction && !json.jsep && json.plugindata.data && json.plugindata.data.result === 'ok') {
+      // ATTACHED to plugin
       return {
         type: LONGPOLLING_ATTACHED,
         connection_id,
         json
       }
     } else if(json.plugindata && !json.transaction && !json.jsep) {
+      // DONE event
       return {
         type: LONGPOLLING_DONE,
         connection_id,
         json
       }
     } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "starting") {
+      // streaming is starting
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STARTING,
         connection_id,
         json
       }
     } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "started") {
+      // streaming is started
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STARTED,
         connection_id,
         json
       }
     } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "stopping") {
+      // streaming is stopping
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STOPPING,
         connection_id,
         json
       }
     } else if(json.plugindata && json.plugindata.plugin === "janus.plugin.streaming" && json.plugindata.data && json.plugindata.data.result && json.plugindata.data.result.status === "stopped") {
+      // streaming is stopped
       return {
         type: PLUGIN.STREAMING.LONGPOLLING_STOPPED,
         connection_id,
@@ -154,24 +189,28 @@ function receiveLongPolling(connection_id, json) {
       }
     }
   } else if (json.janus === "webrtcup") {
+    // when p2p is established
     return {
       type: LONGPOLLING_WEBRTCUP,
       connection_id,
       json
     }
   } else if (json.janus === "media") {
+    // media event
     return {
       type: LONGPOLLING_MEDIA,
       connection_id,
       json
     }
   } else if (json.janus === "keepalive"){
+    // keepalive message event
     return {
       type: LONGPOLLING_KEEPALIVE,
       connection_id,
       json
     }
   } else if (json.janus === "hangup") {
+    // when p2p has hangupped
     return {
       type: LONGPOLLING_HANGUP,
       connection_id,
@@ -186,6 +225,13 @@ function receiveLongPolling(connection_id, json) {
   }
 }
 
+/**
+ * This is for to handle event via long polling interface from Janus.
+ * This function will be repeatedly called by itself until session would be termintated.
+ * 
+ * @param {string} connection_id - connection id
+ * 
+ */
 function startLongPolling(connection_id) {
   return (dispatch, getState) => {
     let { connections }  = getState().sessions
@@ -199,55 +245,91 @@ function startLongPolling(connection_id) {
 
     path = `${path}?rid=${Date.now()}&maxev=1&_=${Date.now()}`
 
-    return fetch(`${ENDPOINT}/${path}`)
+    // start fetch
+    fetch(`${ENDPOINT}/${path}`)
       .then( response => {
         if(response.ok) {
           return response.json()
         } else {
+          // when response is ng
           logger.warn("response of long polling is not ok");
           logger.warn(response.text());
+          
+          return null
         }
       } )
       .then( json => {
-        dispatch(receiveLongPolling(connection_id, json))
+        if(json === null) {
+          // when response is ng, just restart long polling
+          dispatch(stargLongPolling(connection_id))
+        } else {
+          // dispatch reciveLongPolling function to change start
+          dispatch(receiveLongPolling(connection_id, json))
 
-        // while connection alive, do long polling.
-        let currCons = getState().sessions.connections
-        if(currCons[connection_id]) dispatch(startLongPolling(connection_id))
+          // while connection alive, do long polling.
+          let currCons = getState().sessions.connections
+          if(currCons[connection_id]) dispatch(startLongPolling(connection_id))
+        }
       })
   }
 }
 
+/**
+ * This function will be used to send request to Janus Gateway
+ * 
+ * @param {string} connection_id - connection id
+ * @param {string} janus_type - type of request message
+ * @param {object} jsonBody - request message payload
+ */
 function fetchJanus(connection_id, janus_type, jsonBody) {
   return (dispatch, getState) => {
+    // obtain current state for this connection_id
     let { connections } = getState().sessions
     let session_id = connections[connection_id] && connections[connection_id].session_id
     let attach_id = connections[connection_id] && connections[connection_id].attach_id
+    
+    // create entry point path and transaction id
     let path = _.compact(['janus', session_id, attach_id]).join("/")
     let transaction = util.createTransactionId();
 
+    // create request payload
     jsonBody = Object.assign({}, jsonBody, {transaction})
+    
+    // dispatch to refresh current status
     dispatch(requestJanus(connection_id, janus_type, transaction, jsonBody))
 
-    // if(janus_type === REQUEST_ATTACH) dispatch(startLongPolling(connection_id))
-    // fixme: longpolling must be stopped, when terminated
-
+    // setup header for this fetch
     let headers = new Headers()
     headers.append("Content-Type", "application/json")
 
+    // setup option parameter for this fetch
     let body = JSON.stringify(jsonBody)
-    let expect_type = EXPECTS[janus_type]
-
     let opts = {
       method: 'POST',
       headers,
       body
     }
+    
     return fetch(`${ENDPOINT}/${path}`, opts)
-      .then(response => response.json() )
+      .then(response => {
+        if(response.ok) {
+          return response.json() 
+        } else {
+          logger.warn(response.text())
+          return null
+        }
+      })
       .then(json => {
-        dispatch(receiveJanus(connection_id, expect_type, transaction, json))
-        if(expect_type === RESPONSE_CREATE_ID) dispatch(startLongPolling(connection_id))
+        if(json) {
+          // get response type of this transaction
+          let expect_type = EXPECTS[janus_type]
+          
+          // dispatch receiveJanus to change state
+          dispatch(receiveJanus(connection_id, expect_type, transaction, json))
+          
+          // when expect_type equal RESPONSE_CREATE_ID, start Long Polling
+          if(expect_type === RESPONSE_CREATE_ID) dispatch(startLongPolling(connection_id))
+        }
       })
   }
 }
