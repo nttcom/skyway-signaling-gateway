@@ -11,7 +11,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED="0"
 
 // SignalingController
 //   handle signaling message mainly between Janus and SkyWay
-let signalingController = new SignalingControllr(ssgStore, Skyway)
+let signalingController = new SignalingController(ssgStore, Skyway)
 
 
 // handlers for plugin Connector.
