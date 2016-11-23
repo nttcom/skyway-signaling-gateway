@@ -41,8 +41,17 @@
     <script>
     const DEST_PEER = "SSG_komasshu";
 
-    function start() {
-      var peer = new Peer({key: "9dc678c3-e58b-48d4-951e-d4db84e68a7e"})
+    /**
+     * start peer connection
+     *
+     * @param {object} iceServers - ice server setting object
+     *
+     */
+    function start(iceServers) {
+      var peer = new Peer({
+        key: "9dc678c3-e58b-48d4-951e-d4db84e68a7e"
+        , "config" {"iceServers": iceServers}
+      })
 
       peer.on("open", id => {
         $("#mypeerid").val(id);
@@ -111,7 +120,31 @@
       }
 
     }
-    start();
+
+    /**
+     * get credential from turn rest api server, then start.
+     *
+     */
+    $.get("https://turn-rest.skyway.io/api/", {
+      "api": "myvalidkey"  // TURN REST API KEY
+    }).done((turncredential) => {
+      let credential = JSON.parse(turncredential);
+
+      let iceServers = credential.uris.map((uri) => {
+        return {
+          "username": credential.username,
+          "credential": credential.password,
+          "url": uri
+        }
+      });
+      // prepend stun url in array of iceServers setting
+      iceServers.unshift({ 'url': 'stun:stun.l.google.com:19302' });
+
+      // start connection for SkyWay signaling server
+      start(iceServers);
+    }).fail((err) => {
+      console.warn(err);
+    });
 
     </script>
   </body>
