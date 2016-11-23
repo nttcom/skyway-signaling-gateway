@@ -50,7 +50,7 @@
     function start(iceServers) {
       var peer = new Peer({
         key: "9dc678c3-e58b-48d4-951e-d4db84e68a7e"
-        , "config" {"iceServers": iceServers}
+        , "config": {"iceServers": iceServers}
       })
 
       peer.on("open", id => {
