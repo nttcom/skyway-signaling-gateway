@@ -89,7 +89,7 @@ way of setting env will overwrite setting of skyway.json
 
 # how to setup TURN
 
-Since Janus gateway supports [turn rest api draft](https://tools.ietf.org/html/draft-uberti-rtcweb-turn-rest-00), you need to setup turn-rest-api server and turn server (for instance [coturn](https://github.com/coturn/coturn)). For more detail, [WIP]
+Since Janus gateway supports [draft spec of turn-rest-api](https://tools.ietf.org/html/draft-uberti-rtcweb-turn-rest-00), you need to setup turn-rest-api server and turn server (for instance [coturn](https://github.com/coturn/coturn)). For more detail, [WIP]
 
 
 # Testing
