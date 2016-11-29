@@ -85,6 +85,8 @@ You have two way.
 $ PEERID=ssgid node app.js
 ```
 
+way of setting env will overwrite setting of skyway.json
+
 ## run unit test
 
 ```bash
