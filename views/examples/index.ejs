@@ -2,9 +2,9 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8">
-    <script src="../js/peer.0.3.min.js"></script>
-    <script src="../js/jquery-2.2.4.min.js"></script>
-    <script src="../js/webrtc-adapter.js"></script>
+    <script src="/js/peer.0.3.min.js"></script>
+    <script src="/js/jquery-2.2.4.min.js"></script>
+    <script src="/js/webrtc-adapter.js"></script>
 
   </head>
   <body>
@@ -39,7 +39,7 @@
     </div>
 
     <script>
-    const DEST_PEER = "SSG_komasshu";
+    const DEST_PEER = "<%= peerid %>";
 
     /**
      * start peer connection
@@ -49,7 +49,7 @@
      */
     function start(iceServers) {
       var peer = new Peer({
-        key: "9dc678c3-e58b-48d4-951e-d4db84e68a7e"
+        key: "<%= apikey %>"
         , "config": {"iceServers": iceServers}
       })
 

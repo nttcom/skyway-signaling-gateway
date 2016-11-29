@@ -5,30 +5,42 @@ const https = require('https')
 const fs = require('fs')
 
 const logger = log4js.getLogger('webserver')
+const skyway_conf = require('../conf/skyway.json')
 
-logger.debug(__dirname+'/../public')
 app.use(express.static(__dirname+'/../public'));
 
-let httpsServer = https.createServer({
+const httpsServer = https.createServer({
   key:  fs.readFileSync(__dirname+'/../keys/server.key'),
   cert:  fs.readFileSync(__dirname+'/../keys/server.crt')
 }, app)
 
 /**
  * WebServer class
- * 
+ *
  */
 class WebServer {
   /**
    * constructor
-   * 
+   *
    */
   constructor(){
+    this.setRouting();
+  }
+
+  /**
+   * set routing
+   *
+   */
+  setRouting() {
+    // examples
+    app.get('/examples', (req, res) => {
+      res.render('examples/index.ejs', skyway_conf);
+    });
   }
 
   /**
    * start web server
-   * 
+   *
    * @param {integer} port - port number (default: 3000)
    */
   start(port = 3000) {
@@ -36,6 +48,6 @@ class WebServer {
   }
 }
 
-let webserver = new WebServer()
+const webserver = new WebServer()
 
 module.exports = webserver
