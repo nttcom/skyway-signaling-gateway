@@ -74,7 +74,7 @@ conn.send('SSG:stream/stop');
 
 For more detail, check [example app](https://github.com/eastandwest/signalinggateway/blob/master/views/examples/index.ejs) and [provisioning script of SSG](https://github.com/eastandwest/signalinggateway-vagrant).
 
-# how to modify SSG's peerid
+# how to set SSG's peerid
 
 You have two way.
 
