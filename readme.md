@@ -30,7 +30,15 @@ $ node app
 
 # snipet for web apps (how to talk with Janus Gateway)
 
-Snipet below use [SkyWay SDK](http://nttcom.github.io/skyway/en/index.html)
+We support three feature between client and Janus Gateway.
+
+1. bidirectional data channel communication
+  - 3rd party interface for this is TCP (by default 15001)
+2. one-way media stream from Janus Gateway
+3. one-way voice stream to Janus Gateway
+  - 3rd party interface for this is UDP (by default 25000)
+
+Snipet below is leveraging [SkyWay SDK](http://nttcom.github.io/skyway/en/index.html)
 
 ## initialize peer
 
