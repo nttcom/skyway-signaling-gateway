@@ -38,7 +38,7 @@ We support three feature between client and Janus Gateway.
 3. one-way voice stream to Janus Gateway
   - 3rd party interface for this is UDP (by default 25000)
 
-Snipet below is leveraging [SkyWay SDK](http://nttcom.github.io/skyway/en/index.html)
+Below, you can check the Snipets leveraging [SkyWay SDK](http://nttcom.github.io/skyway/en/index.html) for above features. 
 
 ## initialize peer
 
