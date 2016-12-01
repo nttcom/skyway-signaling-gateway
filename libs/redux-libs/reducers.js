@@ -83,13 +83,13 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
       connection = Object.assign({}, connection, { peerids: { client: action.client_peer_id, ssg: action.ssg_peer_id }})
       break;
     case SET_PLUGIN:
-      connection = Object.assign({}, connection, {plugin: action.plugin, buffCandidates: []});
+      connection = Object.assign({}, connection, {plugin: action.plugin});
       break;
     case SET_HANDLE_ID:
       connection = Object.assign({}, connection, {handle_id: action.handle_id});
       break;
     case SET_BUFFER_CANDIDATES:
-      connection = Object.assign({}, connection, {shouldBufferCandidates: action.shouldBufferCandidates});
+      connection = Object.assign({}, connection, {shouldBufferCandidates: action.shouldBufferCandidates, });
       break;
     case SET_OFFER_FROM_SKYWAY:
       connection = Object.assign({}, connection, {offer: action.offer, p2p_type: action.p2p_type});
@@ -98,7 +98,9 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
       connection = Object.assign({}, connection, {answer: action.answer, p2p_type: action.p2p_type});
       break;
     case PUSH_TRICKLE:
-      connection = Object.assign({}, connection, {buffCandidates: [ ...connection.buffCandidates, action.candidate ]});
+      // In case of 1st ice trickle, buffCandidates will be undefined. To prevent error, we'll initialize buffer in this case.
+      var prevBuff = connection.buffCandidates || []
+      connection = Object.assign({}, connection, {buffCandidates: [ ...prevBuff, action.candidate ]});
       break;
     case RESPONSE_CREATE_ID:
       connection = Object.assign({}, connection, {session_id: action.json.data.id})

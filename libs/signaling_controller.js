@@ -1,5 +1,7 @@
 const md5 = require('md5')
 const EventEmitter = require("events").EventEmitter
+
+const _ = require('underscore')
 const log4js = require('log4js')
 
 const CONF = require('../conf/skyway.json')
@@ -77,10 +79,24 @@ class SignalingController extends EventEmitter {
     this.skyway.on("receive/candidate", (connection_id, candidate) => {
       // before receiveing LONGPOLLING_ANSWER, We buffer candidate
       let { connections } = this.ssgStore.getState().sessions
-      let connection = connections[connection_id]
 
+      // In mobile devices (iOS and Android), sdk sends ice trickle message before offer will be sent.
+      // In this case, candidates should be buffered but it will not since connection[connection_id] will be undefined.
+      // To prevent this, we will dispatch setBufferCandidates() to be buffered for ice candidates before offer will be received.
+      let connection = null, shouldBuffer = null;
 
-      if(connection.shouldBufferCandidates) {
+      if( _.has(connections, connection_id) ) {
+        connection = connections[connection_id]
+        shouldBuffer = connection.shouldBufferCandidates
+      } else {
+        // In case when candidates will be received before Offer will arrive
+        shouldBuffer = true
+        this.ssgStore.dispatch(setBufferCandidates(connection_id, shouldBuffer))
+      }
+
+      // When shouldBufferCandidates is true, we'll push candidate object into dedicated buffer.
+      // When it is not, we'll send trickle request to Janus Gateway
+      if( shouldBuffer ) {
         this.ssgStore.dispatch(pushTrickle(connection_id, candidate))
       } else {
         this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
@@ -134,7 +150,7 @@ class SignalingController extends EventEmitter {
           // lift restriction to buffer candidates
           this.ssgStore.dispatch(setBufferCandidates(connection_id, false))
 
-          // dispatch buffered candidates
+          // dispatch each buffered candidates
           connection.buffCandidates.forEach( candidate =>
             this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
           )
