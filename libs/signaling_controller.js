@@ -93,6 +93,7 @@ class SignalingController extends EventEmitter {
         shouldBuffer = true
         this.ssgStore.dispatch(setBufferCandidates(connection_id, shouldBuffer))
       }
+      logger.debug(candidate)
 
       // When shouldBufferCandidates is true, we'll push candidate object into dedicated buffer.
       // When it is not, we'll send trickle request to Janus Gateway
