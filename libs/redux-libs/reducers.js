@@ -89,7 +89,7 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
       connection = Object.assign({}, connection, {handle_id: action.handle_id});
       break;
     case SET_BUFFER_CANDIDATES:
-      connection = Object.assign({}, connection, {shouldBufferCandidates: action.shouldBufferCandidates, });
+      connection = Object.assign({}, connection, {shouldBufferCandidates: action.shouldBufferCandidates});
       break;
     case SET_OFFER_FROM_SKYWAY:
       connection = Object.assign({}, connection, {offer: action.offer, p2p_type: action.p2p_type});
