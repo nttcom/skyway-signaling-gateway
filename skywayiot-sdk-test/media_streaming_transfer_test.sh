@@ -1,5 +1,10 @@
 #!/bin/sh
-gst-launch-1.0 -v \
+
+# kill child processes, when SIGTERM or SIGINT catched
+trap 'kill $(jobs -p)' EXIT
+
+# execute gstreamer
+gst-launch-1.0 \
   audiotestsrc ! \
   audioresample ! audio/x-raw,channels=1,rate=16000 ! \
   opusenc bitrate=20000 ! \

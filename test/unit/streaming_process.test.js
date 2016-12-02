@@ -34,28 +34,35 @@ describe('_stop', () => {
 
 describe('attempt_to_start', () => {
   it('should start process when there is not', () => {
-    expect(streaming_process.attempt_to_start()).toBe(true)
+    let connections = {'123': {'plugin': 'streaming'}};
+    expect(streaming_process.attempt_to_start(connections)).toBe(true)
   });
 
   it('should not start process when there is already', () => {
-    streaming_process._start()
+    let connections = {'123': {'plugin': 'streaming'}};
+    streaming_process._start(connections)
 
-    expect(streaming_process.attempt_to_start()).toBe(false)
+    expect(streaming_process.attempt_to_start(connections)).toBe(false)
   });
+
+  it('should not start process when connections does not include streaming plugin', () => {
+    let connections = {'123': {'plugin': 'skywayiot'}};
+    expect(streaming_process.attempt_to_start(connections)).toBe(false)
+  })
 });
 
 describe('stop_if_no_streaming', () => {
   it('should stop process when there are no streaming client', () => {
     let connections = {'123': {'plugin': 'skywayiot'}};
     streaming_process.stop_if_no_streaming(connections).then( ret => {
-      expect(ret).toBe(false)
+      expect(ret).toBe(true)
     });
   });
 
   it('should not stop process when there are streaming client', () => {
     let connections = {'123': {'plugin': 'streaming'}};
     streaming_process.stop_if_no_streaming(connections).then( ret => {
-      expect(ret).toBe(true)
+      expect(ret).toBe(false)
     });
   });
 })

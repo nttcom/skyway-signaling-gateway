@@ -15,10 +15,11 @@ class StreamingProcess {
    * constructor
    *
    */
-  constructor(loglevel = "WARN") {
+  constructor(loglevel = "INFO") {
     this.streaming_process = STREAMING_PROCESS.split(" ")[0]
     this.args = STREAMING_PROCESS.split(" ").slice(1)
     this.childProcess = null
+    this.disable = process.env.DISABLE_AUTO_STREAMING === 'true'
 
     logger.setLevel(loglevel)
 
@@ -28,8 +29,11 @@ class StreamingProcess {
   /**
    * start
    *
+   * @return {boolean} true means start process, if false there is already the process
    */
   _start() {
+    if(this.disable) return
+
     if(this.childProcess) {
       return false;
     }
@@ -46,6 +50,10 @@ class StreamingProcess {
       logger.warn(err);
       this.childProcess = null
     });
+    this.childProcess.on('exit', (err) => {
+      logger.warn(err);
+      this.childProcess = null
+    });
 
     return true;
   }
@@ -53,18 +61,25 @@ class StreamingProcess {
   /**
    * stop
    *
+   * @promise {boolean} true means process stopped
    */
   _stop() {
+
     return new Promise( (resolv, reject) => {
+      if(this.disable) {
+        resolv(false)
+        return
+      }
+
       try {
+
         if(this.childProcess) {
           this.childProcess.on('exit', () => {
             logger.info("process exit")
             resolv(true)
-            this.childProcess = null
           });
 
-          this.childProcess.kill();
+          this.childProcess.kill('SIGTERM');
         } else {
           resolv(false);
         }
@@ -96,12 +111,18 @@ class StreamingProcess {
    * This method check streaming process aleready started at first.
    * When there is no process, it will start streaming process
    *
+   * @params {object} connections - Object set of connection object {'123': coneection, '234': connection, ... }
+   * @return {boolean} true means process started
+   *
    */
-  attempt_to_start() {
+  attempt_to_start(connections) {
     logger.debug("attempt_to_start");
     // check streaming process already exist
-
-    return this._start()
+    if( this._check_if_streaming_client_exist(connections) ) {
+      return this._start()
+    } else {
+      return false;
+    }
   }
 
   /**
@@ -111,21 +132,22 @@ class StreamingProcess {
    * When there is no clients, it will stop streaming process.
    *
    * @params {object} connections - Object set of connection object {'123': coneection, '234': connection, ... }
-   * @return {boolean} Promise - true means streaming has stopped
+   * @promise {boolean} - true means streaming has stopped
+   *
    */
   stop_if_no_streaming( connections ) {
     // check there are any client which using streaming plugin
     return new Promise( (resolv, reject) => {
       try {
         if( !this._check_if_streaming_client_exist(connections) ) {
-          resolv(false);
-        } else {
           this._stop().then( ret => {
             resolv(true)
           }).catch(err => {
             logger.warn(err)
             reject(err)
           })
+        } else {
+          resolv(false);
         }
       } catch(err) {
         logger.warn(err)

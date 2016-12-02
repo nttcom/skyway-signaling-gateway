@@ -132,6 +132,7 @@ class SignalingController extends EventEmitter {
       if( !_.has(connections, connection_id) ) {
         // In this case, do checking stream sessions availability.
         // When there is no, we'll kill streaming process.
+
         streaming_process.stop_if_no_streaming(connections)
 
         logger.info(`connection ${connection_id} already deleted`);
@@ -175,7 +176,7 @@ class SignalingController extends EventEmitter {
           break;
         case LONGPOLLING_WEBRTCUP:
           // execute media streaming process when it is not work yet.
-          streaming_process.attempt_to_start()
+          streaming_process.attempt_to_start(connections)
           break;
         default:
           break;
