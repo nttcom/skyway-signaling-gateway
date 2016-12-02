@@ -39,12 +39,12 @@ const {
 
 /**
  * update sessions from action message
- * 
+ *
  * @param {object} state - previous session state
  * @param {object} action - action object
- * 
+ *
  */
-function sessions(state = { connections : {}, lastUpdatedConnection: null}, action) {
+function sessions(state = { connections : {}, lastUpdatedConnection: null, lastAction: null }, action) {
   let connection = Object.assign({}, state.connections[action.connection_id], {status: action.type, json: action.json})
 
   switch (action.type) {
@@ -122,6 +122,7 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
       var connections = Object.assign({}, state.connections);
 
       return Object.assign({}, state, {
+        lastAction: action.type,
         lastUpdatedConnection: action.connection_id,
         connections
       })
@@ -132,6 +133,7 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
   var connections = Object.assign({}, state.connections, { [action.connection_id]: connection });
 
   return Object.assign({}, state, {
+    lastAction: action.type,
     lastUpdatedConnection: action.connection_id,
     connections
   })
@@ -140,7 +142,7 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
 
 /**
  * reducder setting
- * 
+ *
  */
 const reducer = combineReducers({
   sessions
