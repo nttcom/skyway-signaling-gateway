@@ -95,6 +95,23 @@ $ PEERID=ssgid node app.js
 
 way of setting env will overwrite setting of skyway.json
 
+# disable automatic execution of streaming process
+
+By default, streaming process configured in janus.json (streaming_process property) will be automatically executed.
+
+```janus.json
+{
+ ...
+ "streaming_process": "skywayiot-sdk-test/media_streaming_transfer_test.sh"
+}
+```
+
+If you want to disable this feature, set DISABLE_AUTO_STREAMING=true while starting process.
+
+```bash
+$ DISABLE_AUTO_STREAMING=true node app.js
+```
+
 # how to setup TURN
 
 Since Janus gateway supports [draft spec of turn-rest-api](https://tools.ietf.org/html/draft-uberti-rtcweb-turn-rest-00), you need to setup turn-rest-api server [WIP] and turn server (for instance [coturn](https://github.com/coturn/coturn)). For more detail, [WIP]
