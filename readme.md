@@ -102,7 +102,7 @@ By default, streaming process configured in janus.json (streaming_process proper
 ```janus.json
 {
  ...
- "streaming_process": "skywayiot-sdk-test/media_streaming_transfer_test.sh"
+ "streaming_process": "/bin/bash /home/ubuntu/signalinggateway/skywayiot-sdk-test/media_streaming_transfer_test.sh"
 }
 ```
 
