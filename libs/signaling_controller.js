@@ -64,6 +64,27 @@ class SignalingController extends EventEmitter {
    */
   setSkywayHandler() {
     this.skyway.on("receive/offer", (connection_id, offer, p2p_type) => {
+      const audioSection = offer.sdp.split(/m=/).filter(section => {
+        return section.indexOf("audio") === 0;
+      });
+      if (audioSection && audioSection[0]) {
+        const newAudioSection =  audioSection[0].split(/\r\n|\r|\n/).map(line => {
+          if (line.match("audio") && line.match("UDP")) {
+            line = "audio 9 UDP/TLS/RTP/SAVPF 111";
+          }
+          return line;
+        }).filter(line => {
+          return (!line.match("a=rtpmap") || line.match("opus"))
+        }).join('\r\n');
+
+        offer.sdp = offer.sdp.split(/m=/).map(section => {
+          if(section.indexOf("audio") === 0) {
+            section = newAudioSection;
+          };
+          return section;
+        }).join('m=');
+      }
+
       this.ssgStore.dispatch(requestCreateId(connection_id, {
         offer,
         p2p_type,
