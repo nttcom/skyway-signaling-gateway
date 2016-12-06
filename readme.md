@@ -30,7 +30,15 @@ $ node app
 
 # snipet for web apps (how to talk with Janus Gateway)
 
-Snipet below use [SkyWay SDK](http://nttcom.github.io/skyway/en/index.html)
+We support three feature between client and Janus Gateway.
+
+1. bidirectional data channel communication
+  - 3rd party interface for this is TCP (by default 15001)
+2. one-way media stream from Janus Gateway
+3. one-way voice stream to Janus Gateway
+  - 3rd party interface for this is UDP (by default 25000)
+
+Below, you can check the Snipets leveraging [SkyWay SDK](http://nttcom.github.io/skyway/en/index.html) for above features. 
 
 ## initialize peer
 
@@ -86,6 +94,23 @@ $ PEERID=ssgid node app.js
 ```
 
 way of setting env will overwrite setting of skyway.json
+
+# disable automatic execution of streaming process
+
+By default, streaming process configured in janus.json (streaming_process property) will be automatically executed.
+
+```janus.json
+{
+ ...
+ "streaming_process": "/bin/bash /home/ubuntu/signalinggateway/skywayiot-sdk-test/media_streaming_transfer_test.sh"
+}
+```
+
+If you want to disable this feature, set DISABLE_AUTO_STREAMING=true while starting process.
+
+```bash
+$ DISABLE_AUTO_STREAMING=true node app.js
+```
 
 # how to setup TURN
 

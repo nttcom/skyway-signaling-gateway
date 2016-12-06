@@ -17,11 +17,9 @@ const {
     receiveJanus
 } = require('../../libs/redux-libs/actions')
 
-const configureMockStore = require('redux-mock-store')
+const configureMockStore = require('redux-mock-store').default
 const thunk = require('redux-thunk')
 const nock = require('nock')
-
-console.log(setOfferFromSkyway)
 
 describe('actions', () => {
     const offer = {type: "offer"}
@@ -163,4 +161,22 @@ describe('actions', () => {
         expect(receiveJanus(connection_id, janus_type, transaction, jsonBody))
             .toEqual(expected)
     })
+})
+
+const middleware = [ thunk ]
+console.log(configureMockStore);
+const mockStore = configureMockStore(middleware )
+
+const CONF = require('../../conf/janus.json')
+
+const ENDPOINT = CONF['rest_scheme'] + "://" + CONF['endpoint_addr'] + ":" + CONF['rest_port']
+
+describe('async test', () => {
+    afterEach(() => {
+        nock.cleanAll()
+    })
+
+    it()
+
+
 })

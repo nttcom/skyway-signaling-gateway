@@ -39,12 +39,12 @@ const {
 
 /**
  * update sessions from action message
- * 
+ *
  * @param {object} state - previous session state
  * @param {object} action - action object
- * 
+ *
  */
-function sessions(state = { connections : {}, lastUpdatedConnection: null}, action) {
+function sessions(state = { connections : {}, lastUpdatedConnection: null, lastAction: null }, action) {
   let connection = Object.assign({}, state.connections[action.connection_id], {status: action.type, json: action.json})
 
   switch (action.type) {
@@ -83,7 +83,7 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
       connection = Object.assign({}, connection, { peerids: { client: action.client_peer_id, ssg: action.ssg_peer_id }})
       break;
     case SET_PLUGIN:
-      connection = Object.assign({}, connection, {plugin: action.plugin, buffCandidates: []});
+      connection = Object.assign({}, connection, {plugin: action.plugin});
       break;
     case SET_HANDLE_ID:
       connection = Object.assign({}, connection, {handle_id: action.handle_id});
@@ -98,7 +98,9 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
       connection = Object.assign({}, connection, {answer: action.answer, p2p_type: action.p2p_type});
       break;
     case PUSH_TRICKLE:
-      connection = Object.assign({}, connection, {buffCandidates: [ ...connection.buffCandidates, action.candidate ]});
+      // In case of 1st ice trickle, buffCandidates will be undefined. To prevent error, we'll initialize buffer in this case.
+      var prevBuff = connection.buffCandidates || []
+      connection = Object.assign({}, connection, {buffCandidates: [ ...prevBuff, action.candidate ]});
       break;
     case RESPONSE_CREATE_ID:
       connection = Object.assign({}, connection, {session_id: action.json.data.id})
@@ -120,6 +122,7 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
       var connections = Object.assign({}, state.connections);
 
       return Object.assign({}, state, {
+        lastAction: action.type,
         lastUpdatedConnection: action.connection_id,
         connections
       })
@@ -130,6 +133,7 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
   var connections = Object.assign({}, state.connections, { [action.connection_id]: connection });
 
   return Object.assign({}, state, {
+    lastAction: action.type,
     lastUpdatedConnection: action.connection_id,
     connections
   })
@@ -138,7 +142,7 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null}, acti
 
 /**
  * reducder setting
- * 
+ *
  */
 const reducer = combineReducers({
   sessions

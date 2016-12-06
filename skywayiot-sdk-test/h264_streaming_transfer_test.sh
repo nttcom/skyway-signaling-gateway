@@ -21,6 +21,10 @@
 # videortpmap = H264/90000
 # videofmtp = profile-level-id=42e028\;packetization-mode=1
 
+# kill child processes, when SIGTERM or SIGINT catched
+trap 'kill $(jobs -p)' EXIT
+
+# execute gstreamer with raspicam
 raspivid --verbose --nopreview -hf -vf \
   --width 640 --height 480 --intra 5 --framerate 15 --bitrate 2000000 \
   --profile baseline --timeout 0 -o - | \
