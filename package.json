@@ -9,7 +9,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "test:watch": "npm run test -- --watch"
+    "test:watch": "npm test -- --watch"
   },
   "keywords": [
     "webrtc",
@@ -39,9 +39,11 @@
     "babel-preset-react": "^6.16.0",
     "jest": "^17.0.3",
     "json-loader": "^0.5.4",
+    "nock": "^9.0.2",
     "react": "^15.3.2",
     "react-dom": "^15.3.2",
     "react-redux": "^4.4.5",
+    "redux-mock-store": "^1.2.1",
     "webpack": "^1.13.2"
   },
   "bugs": {

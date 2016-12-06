@@ -86,18 +86,18 @@ const EXPECTS = {
 
 ///////////////////////////////////////////////////////////////
 // category : set status
-//  
+//
 ///////////////////////////////////////////////////////////////
 
 
 /**
  * This function will be invoked when OFFER received from skyway.
  * This is just for change status.
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {object} offer - jsep object of offer
  * @param {string} p2p_type - "media" or "data"
- * 
+ *
  */
 function setOfferFromSkyway(connection_id, offer, p2p_type) {
   return {
@@ -111,11 +111,11 @@ function setOfferFromSkyway(connection_id, offer, p2p_type) {
 /**
  * This function will be invoked when ANSWER received from skyway.
  * This is just for change status.
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {object} answer - jsep object of answer
  * @param {string} p2p_type - "media" or "answer"
- * 
+ *
  */
 function setAnswerFromSkyway(connection_id, answer, p2p_type) {
   return {
@@ -146,9 +146,9 @@ function setPairOfPeerids(connection_id, client_peer_id, ssg_peer_id) {
 /**
  * This function will be invoked when handle_id will be given from Janus Gateway skywayiot plugin (identifier of data channel session).
  * This is just for change status.
- * 
+ *
  * @param {string} connection_id - connection id
- * @param {string} handle_id - handle id (identifier of data channel session) 
+ * @param {string} handle_id - handle id (identifier of data channel session)
  */
 function setHandleId(connection_id, handle_id) {
   return {
@@ -161,7 +161,7 @@ function setHandleId(connection_id, handle_id) {
 /**
  * This function will be invoked in initialization process to attach Janus Gateway.
  * This is for storing plugin name of this connection.
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {plugin} plugin - name of plugin ("skywayiot" or "streaming")
  */
@@ -176,10 +176,10 @@ function setPlugin(connection_id, plugin) {
 /**
  * This function will be invoked in initialization process to attach Janus Gateway.
  * This will create buffer space for ice trickle
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {boolean} shouldBufferCandidates - flag indicating buffering candidates
- * 
+ *
  */
 function setBufferCandidates(connection_id, flag) {
   return {
@@ -191,12 +191,12 @@ function setBufferCandidates(connection_id, flag) {
 
 /**
  * This will be invoked when request will be sent by fetchJanus()
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {string} janus_type - type of request message
  * @param {string} transaction - transaction id
  * @param {object} jsonBody - request payload
- * 
+ *
  */
 function requestJanus(connection_id, janus_type, transaction, jsonBody) {
   return {
@@ -208,14 +208,14 @@ function requestJanus(connection_id, janus_type, transaction, jsonBody) {
 }
 
 /**
- * This will be called when response received from Janus. 
+ * This will be called when response received from Janus.
  * Called in fetchJanus()
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {string} janus_type - type of response message
  * @param {string} transaction - transaction id
  * @param {object} jsonBody - response payload
- * 
+ *
  */
 function receiveJanus(connection_id, janus_type, transaction, jsonBody) {
   return {
@@ -237,7 +237,7 @@ function receiveJanus(connection_id, janus_type, transaction, jsonBody) {
 
 /**
  * Start establishing connection to Janus Gateway. This function is used for skywayiot-plugin
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {object} params
  * @param {object} params.offer - jsep object for offer
@@ -261,10 +261,10 @@ function requestCreateId(connection_id, params = {
 
 /**
  * Start attaching plugin
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {string} plugin - "skywayiot" or "streaming"
- * 
+ *
  */
 function requestAttach(connection_id, plugin) {
   return (dispatch, getState) => {
@@ -277,12 +277,12 @@ function requestAttach(connection_id, plugin) {
 
 /**
  * Set Mediatype for skywayiot-plugin
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {object} media_type
  * @param {boolean} media_type.audio - enable audio streaming
  * @param {boolean} media_type.video - enable video streaming
- * 
+ *
  */
 function requestMediatype(connection_id, media_type = {audio: true, video: true}) {
   return dispatch => {
@@ -295,12 +295,12 @@ function requestMediatype(connection_id, media_type = {audio: true, video: true}
 
 /**
  * Send offer request from skyway to Janus Gateway (for skywayiot plugin). It must invoked after plugin attach completed
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {object} media_type
  * @param {boolean} media_type.audio - enable audio
  * @param {boolean} media_type.video - enable video
- * @param {objcet} jsep - jsep object of offer 
+ * @param {objcet} jsep - jsep object of offer
  */
 function requestOffer(connection_id, media_type = {audio: true, video: true}, jsep) {
   return dispatch => {
@@ -313,14 +313,14 @@ function requestOffer(connection_id, media_type = {audio: true, video: true}, js
 }
 
 /**
- * Send answer request from skyway to Janus Gateway (for streaming plugin) 
+ * Send answer request from skyway to Janus Gateway (for streaming plugin)
  *
  * @param {string} connection_id - connection id
  * @param {object} params
  * @param {object} params.answer - jsep object of answer
  * @param {string} params.p2p_type - "media" or "data"
  * @param {boolean} params.shouldBufferCandidate - flag for buffering candidates
- * 
+ *
  */
 function requestAnswer(connection_id, params = {
   answer: null,
@@ -342,10 +342,10 @@ function requestAnswer(connection_id, params = {
 
 /**
  * Push ICE candidate to buffer
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {object} candidate - jsep object of ice candidate
- * 
+ *
  */
 function pushTrickle(connection_id, candidate) {
   return {
@@ -357,10 +357,10 @@ function pushTrickle(connection_id, candidate) {
 
 /**
  * Send ICE candidate to JanusGateway
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {object} jsep object of ice candidate
- * 
+ *
  */
 function requestTrickle(connection_id, candidate) {
   return dispatch => {
@@ -373,9 +373,9 @@ function requestTrickle(connection_id, candidate) {
 
 /**
  * Send streaming list request to Janus Gateway. This is used for streaming plugin.
- * 
+ *
  * @param {string} connection_id - connection id
- * 
+ *
  */
 function requestStreamingList(connection_id) {
   return dispatch => {
@@ -390,10 +390,10 @@ function requestStreamingList(connection_id) {
 
 /**
  * Send watch request to Janus Gateway. This is used for streaming plugin.
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {integer} stream_id - stream id
- * 
+ *
  */
 function requestStreamingWatch(connection_id, stream_id) {
   return dispatch => {
@@ -409,9 +409,9 @@ function requestStreamingWatch(connection_id, stream_id) {
 
 /**
  * Send streaming stop request to Janus gateway. This is for streaming plugin.
- * 
+ *
  * @param {string} connection_id - connection id
- * 
+ *
  */
 function requestStreamingStop(connection_id) {
   return dispatch => {
@@ -436,15 +436,15 @@ function requestStreamingStop(connection_id) {
  * This function is to process event message from Janus Gateway.
  * Event messages are offer, answer, webrtcup etc.
  * It will be called inside of startLongPolling()
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {object} json - event message payload
- * 
+ *
  */
 function receiveLongPolling(connection_id, json) {
   if(json.janus === "event") {
     // find action type, based on json message received.
-    // 
+    //
     if(json.plugindata && json.transaction && json.jsep && json.jsep.type === "answer") {
       // ANSER event
       return {
@@ -543,9 +543,9 @@ function receiveLongPolling(connection_id, json) {
 /**
  * This is for to handle event via long polling interface from Janus.
  * This function will be repeatedly called by itself until session would be termintated.
- * 
+ *
  * @param {string} connection_id - connection id
- * 
+ *
  */
 function startLongPolling(connection_id) {
   return (dispatch, getState) => {
@@ -569,7 +569,7 @@ function startLongPolling(connection_id) {
           // when response is ng
           logger.warn("response of long polling is not ok");
           logger.warn(response.text());
-          
+
           return null
         }
       } )
@@ -591,7 +591,7 @@ function startLongPolling(connection_id) {
 
 /**
  * This function will be used to send request to Janus Gateway
- * 
+ *
  * @param {string} connection_id - connection id
  * @param {string} janus_type - type of request message
  * @param {object} jsonBody - request message payload
@@ -602,14 +602,14 @@ function fetchJanus(connection_id, janus_type, jsonBody) {
     let { connections } = getState().sessions
     let session_id = connections[connection_id] && connections[connection_id].session_id
     let attach_id = connections[connection_id] && connections[connection_id].attach_id
-    
+
     // create entry point path and transaction id
     let path = _.compact(['janus', session_id, attach_id]).join("/")
     let transaction = util.createTransactionId();
 
     // create request payload
     jsonBody = Object.assign({}, jsonBody, {transaction})
-    
+
     // dispatch requestJanus to refresh current status
     dispatch(requestJanus(connection_id, janus_type, transaction, jsonBody))
 
@@ -624,11 +624,11 @@ function fetchJanus(connection_id, janus_type, jsonBody) {
       headers,
       body
     }
-    
+
     return fetch(`${ENDPOINT}/${path}`, opts)
       .then(response => {
         if(response.ok) {
-          return response.json() 
+          return response.json()
         } else {
           logger.warn(response.text())
           return null
@@ -638,10 +638,10 @@ function fetchJanus(connection_id, janus_type, jsonBody) {
         if(json) {
           // get response type of this transaction
           let expect_type = EXPECTS[janus_type]
-          
+
           // dispatch receiveJanus to change state
           dispatch(receiveJanus(connection_id, expect_type, transaction, json))
-          
+
           // when expect_type equal RESPONSE_CREATE_ID, start Long Polling
           if(expect_type === RESPONSE_CREATE_ID) dispatch(startLongPolling(connection_id))
         }
@@ -700,5 +700,11 @@ module.exports = {
   pushTrickle,
   setBufferCandidates,
   setHandleId,
-  setPairOfPeerids
+  setPairOfPeerids,
+  setOfferFromSkyway,
+  setAnswerFromSkyway,
+  setPairOfPeerids,
+  setPlugin,
+  requestJanus,
+  receiveJanus
 }
