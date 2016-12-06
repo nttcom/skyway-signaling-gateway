@@ -22,7 +22,7 @@
 # videofmtp = profile-level-id=42e028\;packetization-mode=1
 
 # kill child processes, when SIGTERM or SIGINT catched
-trap 'kill $(jobs -p)' EXIT
+trap 'pkill raspivid; pkill gst-launch-1.0' EXIT
 
 # execute gstreamer with raspicam
 raspivid --verbose --nopreview -hf -vf \
