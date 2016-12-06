@@ -3,7 +3,9 @@ const EventEmitter = require("events").EventEmitter
 
 const _ = require('underscore')
 const log4js = require('log4js')
+
 const streaming_process = require('./miscs/streaming_process')
+const sdp = require('./miscs/sdp')
 
 const CONF = require('../conf/skyway.json')
 const JANUS_CONF = require('../conf/janus.json')
@@ -64,25 +66,11 @@ class SignalingController extends EventEmitter {
    */
   setSkywayHandler() {
     this.skyway.on("receive/offer", (connection_id, offer, p2p_type) => {
-      const audioSection = offer.sdp.split(/m=/).filter(section => {
-        return section.indexOf("audio") === 0;
-      });
-      if (audioSection && audioSection[0]) {
-        const newAudioSection =  audioSection[0].split(/\r\n|\r|\n/).map(line => {
-          if (line.match("audio") && line.match("UDP")) {
-            line = "audio 9 UDP/TLS/RTP/SAVPF 111";
-          }
-          return line;
-        }).filter(line => {
-          return (!line.match("a=rtpmap") || line.match("opus"))
-        }).join('\r\n');
+      // we'll change sdp message to force opus codec when it is indicated.
+      if(process.env.FORCE_OPUS==='true') {
+        const forced_sdp = sdp.force_opus(offer.sdp)
 
-        offer.sdp = offer.sdp.split(/m=/).map(section => {
-          if(section.indexOf("audio") === 0) {
-            section = newAudioSection;
-          };
-          return section;
-        }).join('m=');
+        offer = Object.assign({}, offer, {sdp: forced_sdp})
       }
 
       this.ssgStore.dispatch(requestCreateId(connection_id, {
