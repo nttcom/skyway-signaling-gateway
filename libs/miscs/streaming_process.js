@@ -161,7 +161,7 @@ const streaming_process = new StreamingProcess()
 
 // when process exit, we'll stop running process.
 process.on('exit', () => {
-  // streaming_process._stop()
+  streaming_process._stop()
 })
 
 module.exports = streaming_process
