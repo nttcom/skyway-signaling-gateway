@@ -38,7 +38,7 @@ We support three feature between client and Janus Gateway.
 3. one-way voice stream to Janus Gateway
   - 3rd party interface for this is UDP (by default 25000)
 
-Below, you can check the Snipets leveraging [SkyWay SDK](http://nttcom.github.io/skyway/en/index.html) for above features. 
+Below, you can check the Snipets leveraging [SkyWay SDK](http://nttcom.github.io/skyway/en/index.html) for above features.
 
 ## initialize peer
 
@@ -110,6 +110,14 @@ If you want to disable this feature, set DISABLE_AUTO_STREAMING=true while start
 
 ```bash
 $ DISABLE_AUTO_STREAMING=true node app.js
+```
+
+# force OPUS
+
+By setting FORCE_OPUS=true while starting process, you can force audio codec to opus from client to Janus Gateway.
+
+```bash
+$ FORCE_OPUS=true node app
 ```
 
 # how to setup TURN

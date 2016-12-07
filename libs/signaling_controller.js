@@ -3,7 +3,9 @@ const EventEmitter = require("events").EventEmitter
 
 const _ = require('underscore')
 const log4js = require('log4js')
+
 const streaming_process = require('./miscs/streaming_process')
+const sdp = require('./miscs/sdp')
 
 const CONF = require('../conf/skyway.json')
 const JANUS_CONF = require('../conf/janus.json')
@@ -64,6 +66,13 @@ class SignalingController extends EventEmitter {
    */
   setSkywayHandler() {
     this.skyway.on("receive/offer", (connection_id, offer, p2p_type) => {
+      // we'll change sdp message to force opus codec when it is indicated.
+      if(process.env.FORCE_OPUS==='true') {
+        const forced_sdp = sdp.force_opus(offer.sdp)
+
+        offer = Object.assign({}, offer, {sdp: forced_sdp})
+      }
+
       this.ssgStore.dispatch(requestCreateId(connection_id, {
         offer,
         p2p_type,
