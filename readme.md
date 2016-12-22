@@ -33,7 +33,7 @@ $ node app
 We support three feature between client and Janus Gateway.
 
 1. bidirectional data channel communication
-  - 3rd party interface for this is TCP (by default 15001)
+  - 3rd party interface for this is TCP (by default 15000)
 2. one-way media stream from Janus Gateway
 3. one-way voice stream to Janus Gateway
   - 3rd party interface for this is UDP (by default 25000)
