@@ -25,14 +25,25 @@
 trap 'pkill raspivid; pkill gst-launch-1.0' EXIT
 
 # execute gstreamer with raspicam
-raspivid --verbose --nopreview -hf -vf \
-  --width 640 --height 480 --intra 5 --framerate 15 --bitrate 2000000 \
-  --profile baseline --timeout 0 -o - | \
-  gst-launch-1.0 fdsrc ! \
-    h264parse ! rtph264pay config-interval=1 pt=96 ! \
-      udpsink host=127.0.0.1 port=5004 \
-    audiotestsrc ! \
-    audioresample ! audio/x-raw,channels=1,rate=16000 ! \
-    opusenc bitrate=20000 ! \
-      rtpopuspay ! udpsink host=127.0.0.1 port=5002
+# below needs
+#  apt-get update
+#  apt-get install gstreamer1.0 gstreamer1.0-tools
+#  git clone https://github.com/thaytan/gst-rpicamsrc.git
+#  cd gst-rpicamsrc
+#  ./autogen.sh --prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf/
+#  make
+#  sudo make install
 
+# about gst-rpicamsrc, see more detail at https://github.com/thaytan/gst-rpicamsrc
+
+# videotestsrc | rpicamsrc
+gst-launch-1.0 rpicamsrc ! \
+  video/x-raw,width=640,height=480,framerate=30/1 ! \
+  videoscale ! videorate ! videoconvert ! timeoverlay ! \
+  omxh264enc target-bitrate=2000000 control-rate=variable ! \
+  h264parse ! rtph264pay config-interval=1 pt=96 ! \
+    udpsink host=127.0.0.1 port=5004 \
+audiotestsrc ! \
+  audioresample ! audio/x-raw,channels=1,rate=16000 ! \
+  opusenc bitrate=20000 ! \
+    rtpopuspay ! udpsink host=127.0.0.1 port=5002
