@@ -36,14 +36,26 @@ trap 'pkill raspivid; pkill gst-launch-1.0' EXIT
 
 # about gst-rpicamsrc, see more detail at https://github.com/thaytan/gst-rpicamsrc
 
+# autoaudiosrc ! audioconvert ! \
+# alsasrc device=hw:1 ! audioconvert ! \
 # videotestsrc | rpicamsrc
-gst-launch-1.0 videotestsrc ! \
+
+# to avoid hw:1 as busy, call 'arecord'
+# arecord -l
+# alsasrc device=hw:1 volume=10 ! \
+# alsasrc device=hw:1 ! \
+#  volume volume=8 ! \
+
+# start streaming
+gst-launch-1.0 v4l2src device=/dev/video0 ! \
   video/x-raw,width=640,height=480,framerate=30/1 ! \
   videoscale ! videorate ! videoconvert ! timeoverlay ! \
   omxh264enc target-bitrate=2000000 control-rate=variable ! \
   h264parse ! rtph264pay config-interval=1 pt=96 ! \
     udpsink host=127.0.0.1 port=5004 \
 audiotestsrc ! \
-  audioresample ! audio/x-raw,channels=1,rate=16000 ! \
+  queue ! audioresample ! \
+  audioconvert ! queue ! \
+  audio/x-raw,channels=1,rate=16000 ! \
   opusenc bitrate=20000 ! \
     rtpopuspay ! udpsink host=127.0.0.1 port=5002
