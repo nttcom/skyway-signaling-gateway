@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <script src="/js/peer.0.3.min.js"></script>
+    <script src="/js/jquery-2.2.4.min.js"></script>
+    <script src="/js/webrtc-adapter.js"></script>
+
+    <style>
+      .top {
+        position: absolute;
+        left:0;
+        top:0;
+        padding-left: 30px;
+        width: 100%;
+        height: 64px;
+        background: #000;
+        z-index: 101;
+        border-bottom: 1px solid #fff;
+      }
+      .bottom {
+        position: absolute;
+        left:0;
+        bottom:0;
+        padding-left: 30px;
+        background: #fff;
+        color: #000;
+        width: 100%;
+        z-index: 101;
+        border-top: 1px solid #eee;
+      }
+
+      .console {
+        z-index: 100;
+        position: absolute;
+        left: 0;
+        padding-left: 100px;
+        top:100px;
+        right: 0;
+        bottom: 0;
+      }
+
+
+      .full {
+        z-index: 100;
+        position: absolute;
+        left: 0;
+        top:0;
+        right: 0;
+        bottom: 0;
+      }
+    </style>
+
+  </head>
+  <body>
+    <div>
+      <div class="top"><img height="64" src="/images/nttcom.png"/></div>
+      <div class="console"></div>
+      <div class="full">
+        <video id="streaming" width="100%" height="100%" autoplay></video>
+      </div>
+      <div class="bottom"><img height="32" src="/images/skyway.jpg"/>&nbsp;&nbsp;&copy;NTT Communications Corporation All Rights Reserved.</div>
+    </div>
+
+    <script>
+    const DEST_PEER = "<%= peerid %>";
+    let mypeerid = undefined;
+    let logs = []
+    const logging = function(text) {
+      text = text.replace("<", "&lb")
+      logs.push(text)
+      $(".console").html(logs.join("<br>"))
+    }
+
+    /**
+     * start peer connection
+     *
+     * @param {object} iceServers - ice server setting object
+     *
+     */
+    function start(iceServers) {
+      logging("start establishing p2p connection");
+      var peer = new Peer({
+        key: "<%= apikey %>"
+        , "config": {"iceServers": iceServers}
+      })
+
+      peer.on("open", id => {
+        logging("connected to signaling server");
+        mypeerid = id
+        startDataChannel();
+        console.log("start data channel");
+      })
+
+      // this is for streaming plugin
+
+      peer.on("call", call =>{
+        logging("receive call establishing request.");
+        call.answer()
+
+        call.on("stream", stream => {
+          logging("received video stream");
+          $("#streaming").attr("src", window.URL.createObjectURL(stream))
+        })
+      })
+
+
+      // start datachannel echo
+      startDataChannel = () => {
+        // disable button
+        logging("attempt to start data channel connection");
+        var conn = peer.connect(DEST_PEER, {serialization: "none", reliable: true})
+        conn.on('open', () => {
+          logging("data channel connection established");
+          console.log('data channel connection established')
+          conn.send(`SSG:stream/start,${mypeerid}`)
+        })
+      }
+
+    }
+
+    /**
+     * get credential from turn rest api server, then start.
+     *
+     */
+    logging("start application");
+    $.get("https://turn-rest.skyway.io/api/", {
+      "api": "myvalidkey"  // TURN REST API KEY
+    }).done((turncredential) => {
+      logging("obtained ice setting");
+      let credential = JSON.parse(turncredential);
+
+      let iceServers = credential.uris.map((uri) => {
+        return {
+          "username": credential.username,
+          "credential": credential.password,
+          "url": uri
+        }
+      });
+      // prepend stun url in array of iceServers setting
+      // iceServers.unshift({ 'url': 'stun:stun.l.google.com:19302' });
+      iceServers = [
+      {
+        'url': 'stun:stun.l.google.com:19302'
+      }]
+
+      // start connection for SkyWay signaling server
+      start(iceServers);
+    }).fail((err) => {
+      console.warn(err);
+    });
+
+
+    </script>
+  </body>
+</html>

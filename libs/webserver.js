@@ -36,6 +36,11 @@ class WebServer {
     app.get('/examples', (req, res) => {
       res.render('examples/index.ejs', skyway_conf);
     });
+
+    // full size video
+    app.get('/examples/fullsize', (req, res) => {
+      res.render('examples/fullsize.ejs', skyway_conf);
+    });
   }
 
   /**
