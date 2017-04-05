@@ -4,6 +4,9 @@ const EventEmitter = require("events").EventEmitter
 const _ = require('underscore')
 const log4js = require('log4js')
 
+const ssgStore = require('./redux-libs/store')
+const Skyway = require('./Connector/Skyway')
+
 const streaming_process = require('./miscs/streaming_process')
 const sdp = require('./miscs/sdp')
 
@@ -46,13 +49,17 @@ class SignalingController extends EventEmitter {
    * initialize skyway and ssgStore, then setup handlers
    *
    */
-  constructor(ssgStore, Skyway) {
-    super(ssgStore, Skyway);
+  constructor() {
+    super();
 
-    this.my_peerid = process.env.PEERID || CONF['peerid'] || null
+    this.apikey = CONF['apikey'] || 'invalidkey'
+    this.options   = {
+      origin: CONF['origin'] || null,
+      secure: CONF['secure'] || true
+    };
 
     this.ssgStore = ssgStore // store for Janus
-    this.skyway = new Skyway({option:{peerid: this.my_peerid}}, ssgStore)
+    this.skyway = new Skyway(this.apikey, this.options, ssgStore)
 
     this.skyway.on("opened", ev => {
       this.setSkywayHandler()
@@ -106,7 +113,6 @@ class SignalingController extends EventEmitter {
         shouldBuffer = true
         this.ssgStore.dispatch(setBufferCandidates(connection_id, shouldBuffer))
       }
-      //logger.debug(candidate)
 
       // When shouldBufferCandidates is true, we'll push candidate object into dedicated buffer.
       // When it is not, we'll send trickle request to Janus Gateway
@@ -178,10 +184,15 @@ class SignalingController extends EventEmitter {
           // lift restriction to buffer candidates
           this.ssgStore.dispatch(setBufferCandidates(connection_id, false))
 
-          // dispatch each buffered candidates
-          connection.buffCandidates.forEach( candidate =>
-            this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
-          )
+          // dispatch each buffered candidates, when it exists
+          if(connection.buffCandidates instanceof Array && connection.buffCandidates.length > 0) {
+            connection.buffCandidates.forEach( candidate =>
+              this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
+            )
+          } else {
+            logger.info("no buffered candidates found");
+          }
+
           break;
         case LONGPOLLING_WEBRTCUP:
           // execute media streaming process when it is not work yet.
@@ -210,7 +221,7 @@ class SignalingController extends EventEmitter {
     // since, using streaming plugin does not initiate peer from browser,
     // so we will use connection object in SkyWay connector, explicitly
     let client_peer_id = src
-    let ssg_peer_id = this.my_peerid
+    let ssg_peer_id = this.skyway.myPeerid
 
     this.ssgStore.dispatch(setPairOfPeerids(connection_id, client_peer_id, ssg_peer_id));
 

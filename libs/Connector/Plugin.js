@@ -14,12 +14,12 @@ const CONF = require('../../conf/janus.json')
 /**
  * Skyway IoT plugin connector for Janus Gateway.
  * It will handle data channel message.
- * 
+ *
  */
 class PluginConnector extends EventEmitter {
   /**
    * constructor
-   * 
+   *
    */
   constructor(){
     super()
@@ -38,11 +38,11 @@ class PluginConnector extends EventEmitter {
 
   /**
    * start udp server
-   * 
+   *
    */
   start() {
     this.receiver.bind({address: "0.0.0.0", port: this.receiver_port}, () => {
-      console.log(`succeeded to bind port ${this.receiver_port}`);
+      logger.info(`succeeded to bind port ${this.receiver_port}`);
       this.setRecieveHandler();
     })
   }
@@ -64,9 +64,9 @@ class PluginConnector extends EventEmitter {
 
   /**
    * send message via udp
-   * 
+   *
    * @param {string} id - handle_id in string format
-   * @param {mesg} mesg - arbitorary mesg 
+   * @param {mesg} mesg - arbitorary mesg
    */
   send(id /* hex string */, mesg) {
     let handle_id = new Buffer(id, 'hex')
