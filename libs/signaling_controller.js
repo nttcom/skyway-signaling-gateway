@@ -59,7 +59,14 @@ class SignalingController extends EventEmitter {
     };
 
     this.ssgStore = ssgStore // store for Janus
-    this.skyway = new Skyway(this.apikey, this.options, ssgStore)
+  }
+
+  /**
+   * start connecting skyway server, then setHandler
+   *
+   */
+  start() {
+    this.skyway = new Skyway(this.apikey, this.options, this)
 
     this.skyway.on("opened", ev => {
       this.setSkywayHandler()
@@ -296,7 +303,43 @@ class SignalingController extends EventEmitter {
     // when connection_id is not found, we'll return ""
     return ""
   }
+
+  /**
+   * get client peer id. it will be retrieved from ssg store
+   *
+   * @param {string} connection_id - connection id
+   * @private
+   */
+  getClientPeerid(connection_id){
+    let {connections} = this.ssgStore.getState().sessions
+
+    return connections[connection_id].peerids.client
+  }
+
+  /**
+   * get SSG peer id. it will be retrieved from ssg store
+   *
+   * @param {string} connection_id - connection id
+   * @private
+   */
+  getSSGPeerid(connection_id){
+    // fixme
+    let {connections} = this.ssgStore.getState().sessions
+
+    return connections[connection_id].peerids.ssg
+  }
+
+  /**
+   * set pair of peerids for ssg store
+   *
+   * @params {string} connection_id
+   * @params {string} src
+   * @params {string} dst
+   */
+  setPairOfPeerids(connection_id, src, dst) {
+    this.ssgStore.dispatch(setPairOfPeerids(connection_id, src, dst));
+  }
 }
 
 
-module.exports = SignalingController
+module.exports = new SignalingController()

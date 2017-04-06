@@ -17,10 +17,10 @@ class SkywayConnector extends EventEmitter {
    *
    * @param {string} key     - API KEY
    * @param {object} options - options for Socket constructor
-   * @param {object} store   - SSG store
+   * @param {object} controller - Singnaling Controller
    *
    */
-  constructor(key, options, store){
+  constructor(key, options, controller){
     super();
     // configure static parameter
     this.apikey    = key
@@ -31,7 +31,7 @@ class SkywayConnector extends EventEmitter {
     this.brPeerid = null;
     this.options  = options;
 
-    this.store = store;
+    this.controller = controller;
 
     this._changeStatus("init")
     this.connect();
@@ -75,7 +75,7 @@ class SkywayConnector extends EventEmitter {
     const data = {
       offer: jsep,
       src: this.myPeerid,
-      dst: this._getClientPeerid(connection_id),
+      dst: this.controller.getClientPeerid(connection_id),
       connectionId: connection_id,
       connectionType: type,
       roomName: roomName
@@ -95,7 +95,7 @@ class SkywayConnector extends EventEmitter {
     const data = {
       answer: jsep,
       src: this.myPeerid,
-      dst: this._getClientPeerid(connection_id),
+      dst: this.controller.getClientPeerid(connection_id),
       connectionId: connection_id,
       connectionType: type,
       roomName: roomName
@@ -207,7 +207,8 @@ class SkywayConnector extends EventEmitter {
 
         if(!connection_id || !src || !dst || !offer || !p2p_type) return;
 
-        this.store.dispatch(setPairOfPeerids(connection_id, src, dst))
+        // fixme
+        this.controller.setPairOfPeerids(connection_id, src, dst);
         this.emit('receive/offer', connection_id, offer, p2p_type)
         break;
       case util.MESSAGE_TYPES.SERVER.ANSWER.key:
@@ -217,7 +218,9 @@ class SkywayConnector extends EventEmitter {
 
         if(!connection_id || !src || !dst || !answer || !p2p_type) return;
 
-        this.store.dispatch(setPairOfPeerids(connection_id, src, dst))
+        // fixme
+        this.controller.setPairOfPeerids(connection_id, src, dst);
+
         this.emit('receive/answer', connection_id, answer, p2p_type)
         break;
       case util.MESSAGE_TYPES.SERVER.CANDIDATE.key:
@@ -259,30 +262,6 @@ class SkywayConnector extends EventEmitter {
         logger.warn(`unknown message [${mesg.type}]`)
         break;
     }
-  }
-
-  /**
-   * get client peer id. it will be retrieved from ssg store
-   *
-   * @param {string} connection_id - connection id
-   * @private
-   */
-  _getClientPeerid(connection_id){
-    let {connections} = this.store.getState().sessions
-
-    return connections[connection_id].peerids.client
-  }
-
-  /**
-   * get SSG peer id. it will be retrieved from ssg store
-   *
-   * @param {string} connection_id - connection id
-   * @private
-   */
-  _getSSGPeerid(connection_id){
-    let {connections} = this.store.getState().sessions
-
-    return connections[connection_id].peerids.ssg
   }
 
 

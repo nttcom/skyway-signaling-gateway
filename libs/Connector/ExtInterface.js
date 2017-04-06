@@ -68,7 +68,6 @@ class ExtInterface extends EventEmitter {
 
     let buff = Buffer.concat([handle_id, binMesg], len)
 
-    logger.debug(`data received from DataChannel Controller. hanle_id: ${id}`);
     this.clients.forEach( socket => {
       socket.write(buff)
     })
@@ -85,18 +84,16 @@ class ExtInterface extends EventEmitter {
 
     // generic data
     source
-      .filter(buff => buff.length > 16)
-      .map(buff => {
+      .filter(buff => buff.length > 16) // drop that does not have handle_id
+      .map(buff => {  // serialize to json
         return {
           handle_id: buff.slice(0, 16).toString(),
           binMesg: buff.slice(16)
         }
       })
-      .forEach( obj => {
-        if(obj.handle_id === util.CONTROL_ID) {
-          // it will be handled as control data by DataChannel Controller
-          // then forwarded to Signaling Controller
-          //
+      .forEach( obj => { // switch procedure depends on handle_id
+        switch(obj.handle_id) {
+        case util.CONTROL_ID:
           try {
             const data = JSON.parse( obj.binMesg.toString() )
 
@@ -104,19 +101,13 @@ class ExtInterface extends EventEmitter {
           } catch(e) {
             logger.warn(e);
           }
-        } else if(obj.hanle_id === util.BROADCAST_ID) {
-          // it will be handled as broadcast data by DataChannel Controller
-          // it will be forwarded to every single peer connection
-
+          break;
+        case util.BROADCAST_ID:
           this.emit('broadcast', obj.binMesg);
-        } else {
-          // it will be handled as generic data by DataChannel Controller
-          // then forwarded to WebRTC DataChannel
-
+          break;
+        default:
           this.emit('message', obj.handle_id, obj.binMesg);
         }
-
-        logger.debug(`data received from 3rd party app. handle_id: ${obj.handle_id}`);
       })
   }
 }

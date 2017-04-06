@@ -26,6 +26,7 @@
     "md5": "^2.2.1",
     "node-fetch": "^1.6.3",
     "node-int64": "^0.4.0",
+    "redis": "^2.7.1",
     "redux": "^3.6.0",
     "redux-actions": "^0.12.0",
     "redux-logger": "^2.7.0",

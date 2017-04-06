@@ -88,13 +88,13 @@ class DatachannelController extends EventEmitter {
     const subscribe_SSG_stream = source
       .filter(obj => obj.prefix11 === 'SSG:stream/')
       .forEach(obj => {
-        console.log(obj)
         const strMesg = obj.binMesg.toString();
 
         if(strMesg.indexOf("SSG:stream/start") === 0) {
           let arr = strMesg.split(",")
           if(arr.length === 2 && arr[1].length > 0) {
             let src = arr[1];
+            // fixme
             this.signaling_controller.startStreaming(obj.handle_id, src)
 
             logger.info(`receive SSG:stream/start from ${src}. handle_id = ${obj.handle_id}`)
@@ -103,6 +103,8 @@ class DatachannelController extends EventEmitter {
           }
         } else if(strMesg === "SSG:stream/stop") {
           logger.info(`receive SSG:stream/stop. handle_id = ${obj.handle_id}`)
+
+          // fixme
           this.signaling_controller.stopStreaming(obj.handle_id)
         } else {
           logger.warn(`unknown stream control message. ${strMesg}`)
