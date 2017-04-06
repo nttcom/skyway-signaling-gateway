@@ -122,6 +122,16 @@ class SignalingController extends EventEmitter {
         this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
       }
     })
+
+    this.skyway.on("receive/room_user_join", data => {
+      this.emit("control", Object.assign({}, data, {method: util.MESSAGE_TYPES.SERVER.ROOM_USER_JOIN.key}))
+    })
+    this.skyway.on("receive/room_users", data => {
+      this.emit("control", Object.assign({}, data, {method: util.MESSAGE_TYPES.SERVER.ROOM_USERS.key}))
+    })
+    this.skyway.on("receive/room_user_leave", data => {
+      this.emit("control", Object.assign({}, data, {method: util.MESSAGE_TYPES.SERVER.ROOM_USER_LEAVE.key}))
+    })
   }
 
   /**
@@ -249,6 +259,25 @@ class SignalingController extends EventEmitter {
 
     if(connection_id !== "") this.ssgStore.dispatch(requestStreamingStop(connection_id))
   }
+
+  /**
+   * sendRoomJoin
+   *
+   * @param {string} name - room name
+   */
+  sendRoomJoin(name) {
+    this.skyway.sendRoomJoin(name)
+  }
+
+  /**
+   * sendRoomLeave
+   *
+   * @param {string} name - room name
+   */
+  sendRoomLeave(name) {
+    this.skyway.sendRoomLeave(name)
+  }
+
 
   /**
    * get connection id from handle_id

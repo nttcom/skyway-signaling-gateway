@@ -47,6 +47,9 @@ util.DISPATCHER_PORT = 443;
 util.DISPATCHER_SECURE = true;
 util.DISPATCHER_TIMEOUT = 3000;
 
+util.CONTROL_ID   = 'ZZZZZZZZZZZZZZZZ'
+util.BROADCAST_ID = 'FFFFFFFFFFFFFFFF'
+
 // create token
 util.randomTokenForSkyway = function() {
   return Math.random().toString(36).substr(2);

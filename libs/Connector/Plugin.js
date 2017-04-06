@@ -54,10 +54,12 @@ class PluginConnector extends EventEmitter {
     this.receiver.on('error', err => this.emit("error", err));
     this.receiver.on('message', (buff, rinfo) => {
       // 1st 8 bytes are sender id(uint64)
-      let handle_id = buff.slice(0, 8).toString('hex');
-      let binMesg = buff.slice(8)
+      const obj = {
+        handle_id: buff.slice(0, 8).toString('hex'),
+        binMesg: buff.slice(8)
+      }
 
-      this.emit('message', handle_id, binMesg)
+      this.emit('message', obj)
     });
 
   }

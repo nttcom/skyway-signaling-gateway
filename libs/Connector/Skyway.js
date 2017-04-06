@@ -26,10 +26,10 @@ class SkywayConnector extends EventEmitter {
     this.apikey    = key
 
     // configure random parameters
-    this.myPeerid    = process.env.PEERID || CONF['peerid'] || "SSG_"+util.randomIdForSkyway();
-    this.token   = util.randomTokenForSkyway();
+    this.myPeerid = process.env.PEERID || CONF['peerid'] || "SSG_"+util.randomIdForSkyway();
+    this.token    = util.randomTokenForSkyway();
     this.brPeerid = null;
-    this.options = options;
+    this.options  = options;
 
     this.store = store;
 
@@ -230,13 +230,22 @@ class SkywayConnector extends EventEmitter {
         this.emit('receive/candidate', connection_id, candidate)
         break;
       case util.MESSAGE_TYPES.SERVER.ROOM_USER_JOIN.key:
-        this.emit('receive/room_user_join', data);
+        // append myPeerid to received data.
+        // it will be convenient to check join user is me or not from 3rd party app.
+        var _data = Object.assign({}, data, {my_peerid: this.myPeerid});
+        this.emit('receive/room_user_join', _data);
         break;
       case util.MESSAGE_TYPES.SERVER.ROOM_USERS.key:
-        this.emit('receive/room_users', data);
+        // append myPeerid to received data.
+        // it will be convenient to check user list other than me from 3rd party app.
+        var _data = Object.assign({}, data, {my_peerid: this.myPeerid});
+        this.emit('receive/room_users', _data);
         break;
       case util.MESSAGE_TYPES.SERVER.ROOM_USER_LEAVE.key:
-        this.emit('receive/room_user_leave', data);
+        // append myPeerid to received data.
+        // it will be convenient to check left user is me or not from 3rd party app.
+        var _data = Object.assign({}, data, {my_peerid: this.myPeerid});
+        this.emit('receive/room_user_leave', _data);
         break;
       case util.MESSAGE_TYPES.SERVER.CLOSE.key:
         this._changeStatus("closed")
