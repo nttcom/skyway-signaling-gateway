@@ -3,13 +3,14 @@
  *
  */
 const EventEmitter = require("events").EventEmitter
-const dgram = require('dgram')
+const dgram  = require('dgram')
 const log4js = require('log4js')
-const Int64 = require('node-int64')
+const Int64  = require('node-int64')
+const Rx     = require('rx')
+
+const CONF   = require('../../conf/janus.json')
 
 const logger = log4js.getLogger('PluginConnector')
-
-const CONF = require('../../conf/janus.json')
 
 /**
  * Skyway IoT plugin connector for Janus Gateway.
@@ -51,17 +52,101 @@ class PluginConnector extends EventEmitter {
    * set udp message handler
    */
   setRecieveHandler() {
-    this.receiver.on('error', err => this.emit("error", err));
-    this.receiver.on('message', (buff, rinfo) => {
-      // 1st 8 bytes are sender id(uint64)
-      const obj = {
+    // pre normalization
+    const messageSource = Rx.Observable.fromEvent( this.receiver, 'message')
+      .filter( buff => buff.lenth > 9 )
+      .filter( buff => buff instanceof Buffer )
+      .map( buff => {
         handle_id: buff.slice(0, 8).toString('hex'),
-        binMesg: buff.slice(8)
-      }
+        payload: buff.slice(8)
+      })
 
-      this.emit('message', obj)
+    //////////////////////////////////////////////////////
+    // for data source
+
+    // take out data message
+    const dataSource = messageSource
+      .filter( obj => obj.payload.slice(0, 4).toString() !== "SSG:")
+
+    // normalize data source, then emit 'message' event to controller
+    const subscribeDataSource = dataSource
+      .subscribe( obj => {
+        const data = {
+          type: 'data',
+          handle_id: obj.handle_id,
+          payload: obj.payload
+        }
+        this.emit('message', data)
+      }))
+
+    //////////////////////////////////////////////////////
+    // for control source
+
+    // take out control message and normalize
+    const controlSource = messageSource
+      .filter( obj => obj.payload.slice(0, 4).toString() === "SSG:")
+      .map( obj => {
+        handle_id: obj.handle_id,
+        message: obj.payload.toString()
+      })
+
+    // take out stream control message
+    const controlStreamSource = controlSource
+      .filter(obj => obj.message.indexOf("SSG:stream/") === 0)
+
+    // take out stream/start control message
+    const controlStreamStartSource = controlStreamSource
+      .filter(obj => obj.message.indexOf("SSG:stream/start") === 0)
+
+    // take out stream/stop control message
+    const controlStreamStopSource = controlStreamSource
+      .filter(obj => obj.message === "SSG:stream/stop")
+
+    // create internal messsage format to controller for strea/start, then emit 'message' event
+    const subscribeControlStreamStart = controlStreamStartSource
+      .subscribe(obj => {
+        const arr = obj.message.split(",")
+
+        if(arr.length === 2 && arr[1].length > 0) {
+          const data = {
+            type: 'control',
+            handle_id: obj.handle_id,
+            payload: {
+              type: 'request',
+              target: 'stream',
+              method: 'start',
+              body: {
+                handle_id: obj.handle_id,
+                src: arr[1]
+              }
+            }
+          }
+          this.emit('message', data);
+        } else {
+          logger.warn("cannot find source peerid in stream/start")
+      })
+
+    // create internal messsage format to controller for strea/stop, then emit 'message' event
+    const subscribeControlStreamStop = controlStreamStopSource
+      .subscribe(obj => {
+        const data = {
+          type: 'control',
+          handle_id: obj.handle_id,
+          payload: {
+            type: 'request',
+            target: 'stream',
+            method: 'stop',
+            body: {
+              handle_id: obj.handle_id
+            }
+          }
+        }
+        this.emit('message', data);
+      })
     });
 
+    // error handling
+    this.receiver.on('error', err => this.emit("error", err));
   }
 
   /**
