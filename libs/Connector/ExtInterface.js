@@ -59,18 +59,27 @@ class ExtInterface extends EventEmitter {
    * send message to 3rd party process
    * it will be forwarded to every single 3rd party app.
    *
-   * @param {string} id - handle id in string format
-   * @param {object} binMesg - arbitorary message buffer object
+   * @param {object} data      - data object
+   * @param {string} data.type      - "data" or "control"
+   * @param {string} data.handle_id - handle id in hex format (16 bytes)
+   * @param {object} data.payload   - arbitrary data (Buffer instance)
    */
-  send(id /* hex string */, binMesg) {
-    let handle_id = new Buffer(id)
-    let len = handle_id.length + binMesg.length
+  send(data) {
+    new Array(data)
+      .filter(data => typeof(data) === 'object')
+      .filter(data => data.type === 'data' || data.type === 'control')
+      .filter(data => typeof(data.handle_id) === 'string')
+      .filter(data => data.handle_id.length === 16)
+      .filter(data => data.payload instanceof Buffer)
+      .forEach(data => {
+        let id = new Buffer(data.handle_id, "hex")
+        let len = id.length + data.payload.length
+        let buff = Buffer.concat([id, data.payload], len)
 
-    let buff = Buffer.concat([handle_id, binMesg], len)
-
-    this.clients.forEach( socket => {
-      socket.write(buff)
-    })
+        this.clients.forEach( socket => {
+          socket.write(buff)
+        })
+      })
   }
 
   /**
@@ -81,35 +90,64 @@ class ExtInterface extends EventEmitter {
    */
   _setExtDataObserver(socket) {
     const source = Rx.Observable.fromEvent(socket, 'data')
-
-    // generic data
-    source
-      .filter(buff => buff.length > 16) // drop that does not have handle_id
+      .filter(buff => buff.length > 8) // drop that does not have handle_id
       .map(buff => {  // serialize to json
         return {
-          handle_id: buff.slice(0, 16).toString(),
-          binMesg: buff.slice(16)
+          handle_id: buff.slice(0, 8).toString('hex'),
+          payload: buff.slice(8),
+          is_control: buff.slice(8, 4).toString() === 'SSG:'
         }
       })
-      .forEach( obj => { // switch procedure depends on handle_id
-        switch(obj.handle_id) {
-        case util.CONTROL_ID:
-          try {
-            const data = JSON.parse( obj.binMesg.toString() )
 
-            this.emit('control', data);
-          } catch(e) {
-            logger.warn(e);
-          }
-          break;
-        case util.BROADCAST_ID:
-          this.emit('broadcast', obj.binMesg);
-          break;
-        default:
-          this.emit('message', obj.handle_id, obj.binMesg);
+    const roomSource = source
+      .filter(obj => obj.is_control)
+      .filter(obj => obj.handle_id === util.CONTROL_ID)
+      .map(obj => Object.assign({}, obj, {payload: obj.payload.toString()}))
+      .filter(obj => obj.payload === 'SSG:room/')
+      .map(obj => {
+        const [command, roomName] = obj.payload.slice(4).split(",")
+        const [target, method]    = command.split("/")
+        return {
+          handle_id: obj.handle_id,
+          target,
+          method,
+          roomName
         }
+      })
+      .filter(obj => !!obj.roomName)
+
+    const subscribeRoomSource = roomSource
+      .subscribe( obj => {
+        const data = {
+          type: "control",
+          handle_id: obj.handle_id,
+          payload: {
+            type: "request",
+            target: obj.target,
+            method: obj.method,
+            body: {
+              roomName: obj.roomName
+            }
+          }
+        }
+        this.emit('message', data);
+      });
+
+    const dataSource = source
+      .filter(obj => !obj.is_control)
+
+    const subscribeDataSource = dataSource
+      .subscribe( obj => {
+        const data = {
+          type: "data",
+          handle_id: obj.handle_id,
+          payload: obj.payload
+        }
+        this.emit('message', data)
       })
   }
 }
 
 module.exports = ExtInterface
+
+

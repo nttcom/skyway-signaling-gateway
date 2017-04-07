@@ -57,8 +57,10 @@ class PluginConnector extends EventEmitter {
       .filter( buff => buff.lenth > 9 )
       .filter( buff => buff instanceof Buffer )
       .map( buff => {
-        handle_id: buff.slice(0, 8).toString('hex'),
-        payload: buff.slice(8)
+        return {
+          handle_id: buff.slice(0, 8).toString('hex'),
+          payload: buff.slice(8)
+        }
       })
 
     //////////////////////////////////////////////////////
@@ -77,7 +79,7 @@ class PluginConnector extends EventEmitter {
           payload: obj.payload
         }
         this.emit('message', data)
-      }))
+      })
 
     //////////////////////////////////////////////////////
     // for control source
@@ -86,8 +88,10 @@ class PluginConnector extends EventEmitter {
     const controlSource = messageSource
       .filter( obj => obj.payload.slice(0, 4).toString() === "SSG:")
       .map( obj => {
-        handle_id: obj.handle_id,
-        message: obj.payload.toString()
+        return {
+          handle_id: obj.handle_id,
+          message: obj.payload.toString()
+        }
       })
 
     // take out stream control message
@@ -124,6 +128,7 @@ class PluginConnector extends EventEmitter {
           this.emit('message', data);
         } else {
           logger.warn("cannot find source peerid in stream/start")
+        }
       })
 
     // create internal messsage format to controller for strea/stop, then emit 'message' event
@@ -143,7 +148,6 @@ class PluginConnector extends EventEmitter {
         }
         this.emit('message', data);
       })
-    });
 
     // error handling
     this.receiver.on('error', err => this.emit("error", err));
@@ -152,13 +156,22 @@ class PluginConnector extends EventEmitter {
   /**
    * send message via udp
    *
-   * @param {string} id - handle_id in string format
-   * @param {mesg} mesg - arbitorary mesg
+   * @param {object} msg
+   * @param {string} msg.type - "data"
+   * @param {string} msg.handle_id - handle_id (16bytes)
+   * @param {object} msg.payload - Binary
    */
-  send(id /* hex string */, mesg) {
-    let handle_id = new Buffer(id, 'hex')
+  send( msg) {
+    new Array(msg)
+      .filter(msg => msg.type === 'data')
+      .filter(msg => typeof(msg.handle_id) === 'string')
+      .filter(msg => msg.handle_id.length === 16)
+      .filter(msg => msg.payload instanceof Buffer)
+      .forEach(msg => {
+        let handle_id = new Buffer(msg.handle_id, 'hex')
 
-    this.sender.send([handle_id, mesg], this.sender_port, this.sender_dest)
+        this.sender.send([handle_id, msg.payload], this.sender_port, this.sender_dest)
+      })
   }
 }
 

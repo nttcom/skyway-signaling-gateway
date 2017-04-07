@@ -50,6 +50,11 @@ util.DISPATCHER_TIMEOUT = 3000;
 util.CONTROL_ID   = '0000000000000000'
 util.BROADCAST_ID = 'FFFFFFFFFFFFFFFF'
 
+util.TOPICS = new Enum([
+  'CONTROLLER_SIGNALING',
+  'CONTROLLER_DATACHANNEL'
+]);
+
 // create token
 util.randomTokenForSkyway = function() {
   return Math.random().toString(36).substr(2);

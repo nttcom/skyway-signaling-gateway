@@ -233,22 +233,15 @@ class SkywayConnector extends EventEmitter {
         this.emit('receive/candidate', connection_id, candidate)
         break;
       case util.MESSAGE_TYPES.SERVER.ROOM_USER_JOIN.key:
-        // append myPeerid to received data.
-        // it will be convenient to check join user is me or not from 3rd party app.
-        var _data = Object.assign({}, data, {my_peerid: this.myPeerid});
-        this.emit('receive/room_user_join', _data);
-        break;
       case util.MESSAGE_TYPES.SERVER.ROOM_USERS.key:
-        // append myPeerid to received data.
-        // it will be convenient to check user list other than me from 3rd party app.
-        var _data = Object.assign({}, data, {my_peerid: this.myPeerid});
-        this.emit('receive/room_users', _data);
-        break;
       case util.MESSAGE_TYPES.SERVER.ROOM_USER_LEAVE.key:
-        // append myPeerid to received data.
-        // it will be convenient to check left user is me or not from 3rd party app.
-        var _data = Object.assign({}, data, {my_peerid: this.myPeerid});
-        this.emit('receive/room_user_leave', _data);
+        var data = {
+          type: "response",
+          target: "room",
+          method: type.toLowerCase(),
+          body: mesg
+        }
+        this.emit('message', data);
         break;
       case util.MESSAGE_TYPES.SERVER.CLOSE.key:
         this._changeStatus("closed")

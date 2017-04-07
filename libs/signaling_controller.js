@@ -1,5 +1,7 @@
 const md5 = require('md5')
 const EventEmitter = require("events").EventEmitter
+const redis = require('redis')
+const Rx = require('rx')
 
 const _ = require('underscore')
 const log4js = require('log4js')
@@ -66,6 +68,14 @@ class SignalingController extends EventEmitter {
    *
    */
   start() {
+    this.sub = redis.createClient()
+    this.pub = redis.createClient()
+    this.sub.subscribe(util.TOPICS.CONTROLLER_SIGNALING.key)
+
+    this.sub.on('subscribe', (channel) => {
+      logger.info(`topic ${channel} subscribed`)
+      this.setSubscriberHandler()
+    })
     this.skyway = new Skyway(this.apikey, this.options, this)
 
     this.skyway.on("opened", ev => {
@@ -130,15 +140,9 @@ class SignalingController extends EventEmitter {
       }
     })
 
-    this.skyway.on("receive/room_user_join", data => {
-      this.emit("control", Object.assign({}, data, {method: util.MESSAGE_TYPES.SERVER.ROOM_USER_JOIN.key}))
-    })
-    this.skyway.on("receive/room_users", data => {
-      this.emit("control", Object.assign({}, data, {method: util.MESSAGE_TYPES.SERVER.ROOM_USERS.key}))
-    })
-    this.skyway.on("receive/room_user_leave", data => {
-      this.emit("control", Object.assign({}, data, {method: util.MESSAGE_TYPES.SERVER.ROOM_USER_LEAVE.key}))
-    })
+    Rx.Observable.fromEvent(this.skyway, "message")
+      .filter(mesg => mesg.type === "response" && mesg.target === "room")
+      .subscribe(mesg => { this.pub.publish(util.TOPICS.CONTROLLER_DATACHANNEL, mesg) })
   }
 
   /**
@@ -222,6 +226,49 @@ class SignalingController extends EventEmitter {
   }
 
   /**
+   * set redis subscriber handler
+   */
+  setSubscriberHandler() {
+    this.sub.on('message', data => {
+      if(data.type !== 'request') return;
+      switch(data.target) {
+      case 'stream':
+        this.handleStreaming(data)
+        break;
+      case 'room':
+        this.handleRoom(data)
+        break;
+      default:
+        break;
+      }
+    })
+  }
+
+  /**
+   * handle streaming request
+   *
+   * @param {object} data
+   * @param {string} data.type - "request"
+   * @param {string} data.target - "stream"
+   * @param {string} data.method - "start" or "stop"
+   * @param {object} data.body
+   * @param {string} data.body.handle_id
+   * @param {string} [data.body.src] - source peer id (available when method is start)
+   */
+  handleStreaming(data) {
+    switch(data.method) {
+    case 'start':
+      this.startStreaming(data.body.handle_id, data.body.src)
+      break;
+    case 'stop':
+      this.stopStreaming(data.body.handle_id);
+      break;
+    default:
+      break;
+    }
+  }
+
+  /**
    * start streaming plugin
    *
    * @param {string} handle_id - handle id (identifier for data channel)
@@ -266,6 +313,30 @@ class SignalingController extends EventEmitter {
 
     if(connection_id !== "") this.ssgStore.dispatch(requestStreamingStop(connection_id))
   }
+
+  /**
+   * handle room api
+   *
+   * @param {object} data
+   * @param {string} data.type - "request"
+   * @param {string} data.target - "room"
+   * @param {string} data.method - "join" or "leave"
+   * @param {object} data.body
+   * @param {string} data.body.roomName
+   */
+  handleRoom(data) {
+    switch(data.method) {
+    case 'join':
+      this.sendRoomJoin(data.body.roomName)
+      break;
+    case 'leave':
+      this.sendRoomLeave(data.body.roomName)
+      break;
+    default:
+      break;
+    }
+  }
+
 
   /**
    * sendRoomJoin

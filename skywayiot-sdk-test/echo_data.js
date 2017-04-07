@@ -21,17 +21,17 @@ let client = new net.Socket()
 client.connect(port, '127.0.0.1')
 
 client.on('data', (buff) => {
-  let handle_id = buff.slice(0, 16).toString()
-  let data = buff.slice(16).toString();
+  let handle_id = buff.slice(0, 8).toString('hex')
+  let data = buff.slice(8).toString();
 
   logger.debug(`recv - ${handle_id}: ${data}`)
 
   let echomesg =`echo message => ${data}`
 
-  let buff_id = new Buffer(handle_id)
-  let buff_data = new Buffer(echomesg)
+  let echo_id = new Buffer(handle_id)
+  let echo_data = new Buffer(echomesg)
 
-  let len = buff_id.length + buff_data.length
+  let len = echo_id.length + echo_data.length
 
-  client.write(Buffer.concat([buff_id, buff_data], len))
+  client.write(Buffer.concat([echo_id, echo_data], len))
 })
