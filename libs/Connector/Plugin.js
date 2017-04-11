@@ -54,11 +54,11 @@ class PluginConnector extends EventEmitter {
   setRecieveHandler() {
     // pre normalization
     const messageSource = Rx.Observable.fromEvent( this.receiver, 'message')
-      .filter( buff => buff.lenth > 9 )
+      .filter( buff => buff.length > 9 )
       .filter( buff => buff instanceof Buffer )
       .map( buff => {
         return {
-          handle_id: buff.slice(0, 8).toString('hex'),
+          handle_id: buff.slice(0, 8),
           payload: buff.slice(8)
         }
       })
@@ -156,6 +156,7 @@ class PluginConnector extends EventEmitter {
   /**
    * send message via udp
    *
+   *
    * @param {object} msg
    * @param {string} msg.type - "data"
    * @param {string} msg.handle_id - handle_id (16bytes)
@@ -164,13 +165,11 @@ class PluginConnector extends EventEmitter {
   send( msg) {
     new Array(msg)
       .filter(msg => msg.type === 'data')
-      .filter(msg => typeof(msg.handle_id) === 'string')
-      .filter(msg => msg.handle_id.length === 16)
+      .filter(msg => msg.handle_id instanceof Buffer)
+      .filter(msg => msg.handle_id.length === 8)
       .filter(msg => msg.payload instanceof Buffer)
       .forEach(msg => {
-        let handle_id = new Buffer(msg.handle_id, 'hex')
-
-        this.sender.send([handle_id, msg.payload], this.sender_port, this.sender_dest)
+        this.sender.send([msg.handle_id, msg.payload], this.sender_port, this.sender_dest)
       })
   }
 }

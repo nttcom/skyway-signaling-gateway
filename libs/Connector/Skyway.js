@@ -239,7 +239,7 @@ class SkywayConnector extends EventEmitter {
           type: "response",
           target: "room",
           method: type.toLowerCase(),
-          body: mesg
+          body: Object.assign({}, mesg, {ssg_peerid: this.myPeerid})
         }
         this.emit('message', data);
         break;

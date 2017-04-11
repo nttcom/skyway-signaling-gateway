@@ -68,13 +68,19 @@ class ExtInterface extends EventEmitter {
     new Array(data)
       .filter(data => typeof(data) === 'object')
       .filter(data => data.type === 'data' || data.type === 'control')
-      .filter(data => typeof(data.handle_id) === 'string')
-      .filter(data => data.handle_id.length === 16)
-      .filter(data => data.payload instanceof Buffer)
+      .filter(data => data.handle_id instanceof Buffer)
+      .filter(data => data.handle_id.length === 8)
       .forEach(data => {
-        let id = new Buffer(data.handle_id, "hex")
-        let len = id.length + data.payload.length
-        let buff = Buffer.concat([id, data.payload], len)
+        let len = data.handle_id.length + data.payload.length
+        let payload
+        if(data.payload instanceof Buffer) {
+          payload = data.payload;
+        } else if(typeof(data.payload) === 'object') {
+          payload = new Buffer(JSON.stringify(data.payload))
+        } else {
+          payload = new Buffer(data.payload)
+        }
+        let buff = Buffer.concat([data.handle_id, payload], len)
 
         this.clients.forEach( socket => {
           socket.write(buff)
@@ -90,20 +96,20 @@ class ExtInterface extends EventEmitter {
    */
   _setExtDataObserver(socket) {
     const source = Rx.Observable.fromEvent(socket, 'data')
-      .filter(buff => buff.length > 8) // drop that does not have handle_id
-      .map(buff => {  // serialize to json
+      .filter(buff => buff.length > 8) // drop data when it does not have handle_id
+      .map(buff => {  // transform buffer object to json
         return {
-          handle_id: buff.slice(0, 8).toString('hex'),
+          handle_id: buff.slice(0, 8),
           payload: buff.slice(8),
-          is_control: buff.slice(8, 4).toString() === 'SSG:'
+          is_control: buff.slice(8, 12).toString() === 'SSG:'
         }
       })
 
     const roomSource = source
       .filter(obj => obj.is_control)
-      .filter(obj => obj.handle_id === util.CONTROL_ID)
+      .filter(obj => obj.handle_id.equals(util.CONTROL_ID) )
       .map(obj => Object.assign({}, obj, {payload: obj.payload.toString()}))
-      .filter(obj => obj.payload === 'SSG:room/')
+      .filter(obj => obj.payload.indexOf('SSG:room/') === 0 )
       .map(obj => {
         const [command, roomName] = obj.payload.slice(4).split(",")
         const [target, method]    = command.split("/")

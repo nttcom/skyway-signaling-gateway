@@ -142,7 +142,7 @@ class SignalingController extends EventEmitter {
 
     Rx.Observable.fromEvent(this.skyway, "message")
       .filter(mesg => mesg.type === "response" && mesg.target === "room")
-      .subscribe(mesg => { this.pub.publish(util.TOPICS.CONTROLLER_DATACHANNEL, mesg) })
+      .subscribe(mesg => { this.pub.publish(util.TOPICS.CONTROLLER_DATACHANNEL.key, JSON.stringify(mesg)) })
   }
 
   /**
@@ -229,17 +229,23 @@ class SignalingController extends EventEmitter {
    * set redis subscriber handler
    */
   setSubscriberHandler() {
-    this.sub.on('message', data => {
-      if(data.type !== 'request') return;
-      switch(data.target) {
-      case 'stream':
-        this.handleStreaming(data)
-        break;
-      case 'room':
-        this.handleRoom(data)
-        break;
-      default:
-        break;
+    this.sub.on('message', (channel, data) => {
+      logger.debug("message from redis", channel, data)
+      try {
+        const _data = JSON.parse(data).payload
+        if(_data.type !== 'request') return;
+        switch(_data.target) {
+        case 'stream':
+          this.handleStreaming(_data)
+          break;
+        case 'room':
+          this.handleRoom(_data)
+          break;
+        default:
+          break;
+        }
+      } catch(e) {
+        logger.warn(e)
       }
     })
   }
@@ -289,7 +295,7 @@ class SignalingController extends EventEmitter {
 
     this.ssgStore.dispatch(setPairOfPeerids(connection_id, client_peer_id, ssg_peer_id));
 
-    this.ssgStore.dispatch(setHandleId(connection_id, handle_id));
+    this.ssgStore.dispatch(setHandleId(connection_id, handle_id.toString('hex')));
     this.ssgStore.dispatch(requestCreateId(connection_id, {
       offer: null,
       p2p_type: "media",
@@ -309,7 +315,7 @@ class SignalingController extends EventEmitter {
       logger.error( "skyway is not opened" )
       return;
     }
-    let connection_id = this.getConnectionId(handle_id)
+    let connection_id = this.getConnectionId(handle_id.toString('hex'))
 
     if(connection_id !== "") this.ssgStore.dispatch(requestStreamingStop(connection_id))
   }

@@ -81,7 +81,8 @@ class DatachannelController extends EventEmitter {
       .subscribe( msg => { extInterface.send(msg) } )
 
     const subscribeControl = source.filter(msg => msg.type === "control")
-      .subscribe( msg => { this.pub( util.TOPICS.CONTROLLER_SIGNALING.key, msg ) })
+      .subscribe( msg => { this.pub.publish( util.TOPICS.CONTROLLER_SIGNALING.key, JSON.stringify(msg) ) })
+      //.subscribe( msg => { this.pub.publish( util.TOPICS.CONTROLLER_SIGNALING.key, msg ) })
   }
 
   /**
@@ -104,7 +105,13 @@ class DatachannelController extends EventEmitter {
 
     const subscribeControlSource = source
       .filter(msg => msg.type === 'control')
-      .subscribe( msg => { this.pub( util.TOPICS.CONTROLLER_SIGNALING.key, msg ) })
+      .subscribe( msg => {
+        try {
+          const msg_ = JSON.stringify(msg)
+          this.pub.publish( util.TOPICS.CONTROLLER_SIGNALING.key, msg_ )
+        } catch(e) {
+        }
+      })
   }
 
   /**
@@ -116,15 +123,22 @@ class DatachannelController extends EventEmitter {
    * @private
    */
   _setSubscriberHandler() {
-    this.sub.on('message', mesg => {
-      if(mesg.type === 'response' && mesg.target === 'room') {
-        const data = {
-          type: "control",
-          handle_id: util.CONTROL_ID,
-          payload: mesg
-        }
+    this.sub.on('message', (channel, mesg) => {
+      logger.debug("message from redis", channel, mesg)
+      try {
+        const _mesg = JSON.parse(mesg);
 
-        extInterface.send(data)
+        if(_mesg.type === 'response' && _mesg.target === 'room') {
+          const data = {
+            type: "control",
+            handle_id: util.CONTROL_ID,
+            payload: _mesg
+          }
+
+          extInterface.send(data)
+        }
+      } catch(e) {
+        logger.warn(e);
       }
     })
   }
