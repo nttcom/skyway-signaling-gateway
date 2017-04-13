@@ -1,10 +1,13 @@
 const SignalingController = require('./libs/signaling_controller')
 const DatachannelController = require('./libs/datachannel_controller')
+const ProfileManager = require('./libs/profile_manager')
 const webserver = require('./libs/webserver')
 
 // ignore error of self signed tls connection
 process.env.NODE_TLS_REJECT_UNAUTHORIZED="0"
 
+// start ProfileManager
+ProfileManager.start()
 
 // SignalingController
 //   handle signaling message mainly between Janus and SkyWay

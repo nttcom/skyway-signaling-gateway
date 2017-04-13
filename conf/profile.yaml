@@ -1,0 +1,10 @@
+name: raspi205
+topics:
+  - name: temperature
+    title: cpu temperature
+    type: json
+    properties:
+      - name: value
+        type: number
+        description: current temperature
+uuid: 3f6f6873-8191-44d9-a229-bb652884dd61

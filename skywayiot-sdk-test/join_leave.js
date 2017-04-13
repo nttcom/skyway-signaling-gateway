@@ -45,9 +45,12 @@ client.on('data', (buff) => {
   let data = buff.slice(8).toString();
 
   logger.debug(`recv - ${handle_id.toString("hex")}: ${data}`)
-  const mesg = JSON.stringify({"topic": "presence", "payload": "echo"})
-  const echo_mesg = Buffer.concat([handle_id, new Buffer(mesg)])
-  client.write(echo_mesg)
+  const mesg_uni = JSON.stringify({"topic": "presence", "payload": "unicast echo"})
+  const mesg_broad = JSON.stringify({"topic": "presence", "payload": "broadcast echo"})
+  const echo_uni   = Buffer.concat([handle_id, new Buffer(mesg_uni)])
+  const echo_broad = Buffer.concat([util.BROADCAST_ID, new Buffer(mesg_broad)])
+  client.write(echo_uni)
+  setTimeout(ev => { client.write(echo_broad)}, 100)
 })
 
 

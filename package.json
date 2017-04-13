@@ -26,6 +26,7 @@
     "md5": "^2.2.1",
     "node-fetch": "^1.6.3",
     "node-int64": "^0.4.0",
+    "node-yaml": "^3.0.3",
     "redis": "^2.7.1",
     "redux": "^3.6.0",
     "redux-actions": "^0.12.0",
@@ -35,6 +36,7 @@
     "socket.io": "^1.7.3",
     "socket.io-client": "^1.7.3",
     "underscore": "^1.8.3",
+    "uuid": "^3.0.1",
     "ws": "^1.1.1"
   },
   "devDependencies": {

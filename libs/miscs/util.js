@@ -52,7 +52,8 @@ util.BROADCAST_ID = new Buffer('FFFFFFFFFFFFFFFF', "hex")
 
 util.TOPICS = new Enum([
   'CONTROLLER_SIGNALING',
-  'CONTROLLER_DATACHANNEL'
+  'CONTROLLER_DATACHANNEL',
+  'MANAGER_PROFILE'
 ]);
 
 // create token
