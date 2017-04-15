@@ -81,7 +81,19 @@ class DatachannelController extends EventEmitter {
       .subscribe( msg => { extInterface.send(msg) } )
 
     const subscribeControl = source.filter(msg => msg.type === "control")
-      .subscribe( msg => { this.pub.publish( util.TOPICS.CONTROLLER_SIGNALING.key, JSON.stringify(msg) ) })
+      .filter( msg => typeof(msg.payload) === 'object'  && typeof(msg.payload.target) === 'string' )
+      .subscribe( msg => {
+        let topic;
+        switch(msg.payload.target) {
+        case 'stream':
+          topic = util.TOPICS.CONTROLLER_SIGNALING.key
+          break
+        case 'profile':
+          topic = util.TOPICS.MANAGER_PROFILE.key
+          break
+        }
+        if(topic) this.pub.publish( topic, JSON.stringify(msg.payload) )
+      })
       //.subscribe( msg => { this.pub.publish( util.TOPICS.CONTROLLER_SIGNALING.key, msg ) })
   }
 
@@ -129,13 +141,19 @@ class DatachannelController extends EventEmitter {
         const _mesg = JSON.parse(mesg);
 
         if(_mesg.type === 'response' && _mesg.target === 'room') {
-          const data = {
+          var data = {
             type: "control",
             handle_id: util.CONTROL_ID,
             payload: _mesg
           }
-
           extInterface.send(data)
+        } else if(_mesg.type === 'response' && _mesg.target === 'profile') {
+          var data = {
+            type: "data",
+            handle_id: _mesg.body.handle_id,
+            payload: new Buffer(JSON.stringify(_mesg))
+          }
+          pluginConn.send(data)
         }
       } catch(e) {
         logger.warn(e);

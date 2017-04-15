@@ -52,7 +52,7 @@ class SkywayConnector extends EventEmitter {
     this.socket.on(util.MESSAGE_TYPES.SERVER.OPEN.key, () => {
       logger.info("connection established");
 
-      this._changeStatus("opened")
+      this._changeStatus("opened", this.myPeerid)
       this._setSocketHandler();
     });
 
@@ -266,9 +266,9 @@ class SkywayConnector extends EventEmitter {
    * @param {string} status - status of this connector
    * @private
    */
-  _changeStatus(status) {
+  _changeStatus(status, argument) {
     this.status = status;
-    this.emit(status)
+    this.emit(status, argument)
   }
 }
 

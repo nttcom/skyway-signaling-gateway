@@ -149,6 +149,24 @@ class PluginConnector extends EventEmitter {
         this.emit('message', data);
       })
 
+    const controlProfileGet = controlStreamSource
+      .filter(obj => obj.message === "SSG:profile/get")
+      .subscribe( () => {
+        const data = {
+          type: 'control',
+          handle_id: obj.handle_id,
+          payload: {
+            type: 'request',
+            target: 'profile',
+            method: 'get',
+            body: {
+              handle_id: obj.handle_id
+            }
+          }
+        }
+        this.emit('message', data)
+      })
+
     // error handling
     this.receiver.on('error', err => this.emit("error", err));
   }

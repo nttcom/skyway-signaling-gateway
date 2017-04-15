@@ -78,7 +78,17 @@ class SignalingController extends EventEmitter {
     })
     this.skyway = new Skyway(this.apikey, this.options, this)
 
-    this.skyway.on("opened", ev => {
+    this.skyway.on("opened", peerid => {
+      const notify = {
+        type: "notify",
+        target: "profile",
+        method: "skyway_opened",
+        body: {
+          "ssg_peerid": peerid
+        }
+      }
+      this.pub.publish(util.TOPICS.MANAGER_PROFILE.key, JSON.stringify(notify))
+
       this.setSkywayHandler()
       this.setJanusHandler()
     })
