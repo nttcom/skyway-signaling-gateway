@@ -149,7 +149,7 @@ class DatachannelController extends EventEmitter {
           extInterface.send(data)
         } else if(_mesg.type === 'response' && _mesg.target === 'profile') {
           var data = {
-            type: "data",
+            type: "control",
             handle_id: _mesg.body.handle_id,
             payload: new Buffer(JSON.stringify(_mesg))
           }

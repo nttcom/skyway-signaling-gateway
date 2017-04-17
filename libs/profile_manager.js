@@ -108,7 +108,7 @@ class ProfileManager extends EventEmitter {
             && obj.target === 'profile'
             && obj.method === 'get'
             && typeof(obj.body) === 'object'
-            && typeof(obj.body.handle_id) === 'string') {
+            && typeof(obj.body.handle_id) === 'object') {
           var body = Object.assign({}, this.profile, {ssg_peerid: this.ssg_peerid, handle_id: obj.body.handle_id})
           ret = {
             type: "response",
@@ -116,7 +116,8 @@ class ProfileManager extends EventEmitter {
             method: "get",
             body: body
           }
-          this.pub.publish(util.TOPICS.CONTROLLER_DATACHANNEL.key, JSON.stringify(body))
+          logger.debug('profile response', ret)
+          this.pub.publish(util.TOPICS.CONTROLLER_DATACHANNEL.key, JSON.stringify(ret))
         }
       } catch(e) {
       }

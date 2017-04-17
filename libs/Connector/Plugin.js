@@ -149,9 +149,9 @@ class PluginConnector extends EventEmitter {
         this.emit('message', data);
       })
 
-    const controlProfileGet = controlStreamSource
+    const controlProfileGet = controlSource
       .filter(obj => obj.message === "SSG:profile/get")
-      .subscribe( () => {
+      .subscribe( obj => {
         const data = {
           type: 'control',
           handle_id: obj.handle_id,
@@ -176,18 +176,21 @@ class PluginConnector extends EventEmitter {
    *
    *
    * @param {object} msg
-   * @param {string} msg.type - "data"
+   * @param {string} msg.type - "data" or "control"
    * @param {string} msg.handle_id - handle_id (16bytes)
    * @param {object} msg.payload - Binary
    */
   send( msg) {
     new Array(msg)
-      .filter(msg => msg.type === 'data')
-      .filter(msg => msg.handle_id instanceof Buffer)
-      .filter(msg => msg.handle_id.length === 8)
+      .filter(msg => msg.type === 'data' || msg.type === 'control')
+      .filter(msg => typeof(msg.handle_id) === 'object')
+      .filter(msg => msg.handle_id.length === 8 || msg.handle_id.data.length === 8 )
       .filter(msg => msg.payload instanceof Buffer)
       .forEach(msg => {
-        this.sender.send([msg.handle_id, msg.payload], this.sender_port, this.sender_dest)
+        if(!(msg.handle_id instanceof Buffer)) msg.handle_id = new Buffer(msg.handle_id)
+
+        const data = msg.type === 'data' ?  [msg.handle_id, msg.payload] : [msg.handle_id, 'SSG:', msg.payload];
+        this.sender.send(data, this.sender_port, this.sender_dest)
       })
   }
 }
