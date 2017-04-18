@@ -242,7 +242,8 @@ class SignalingController extends EventEmitter {
     this.sub.on('message', (channel, data) => {
       logger.debug("message from redis", channel, data)
       try {
-        const _data = JSON.parse(data).payload
+        const _data = JSON.parse(data)
+        console.log(_data)
         if(_data.type !== 'request') return;
         switch(_data.target) {
         case 'stream':

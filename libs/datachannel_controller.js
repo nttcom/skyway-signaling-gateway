@@ -119,7 +119,7 @@ class DatachannelController extends EventEmitter {
       .filter(msg => msg.type === 'control')
       .subscribe( msg => {
         try {
-          const msg_ = JSON.stringify(msg)
+          const msg_ = JSON.stringify(msg.payload)
           this.pub.publish( util.TOPICS.CONTROLLER_SIGNALING.key, msg_ )
         } catch(e) {
         }
