@@ -7,10 +7,12 @@ const dgram  = require('dgram')
 const log4js = require('log4js')
 const Int64  = require('node-int64')
 const Rx     = require('rx')
+const fetch  = require('node-fetch')
 
 const CONF   = require('../../conf/janus.json')
 
 const logger = log4js.getLogger('PluginConnector')
+const util = require('../miscs/util')
 
 /**
  * Skyway IoT plugin connector for Janus Gateway.
@@ -34,7 +36,10 @@ class PluginConnector extends EventEmitter {
     this.sender = dgram.createSocket('udp4')
     this.receiver = dgram.createSocket('udp4')
 
-    this.start();
+    util.loadAppYaml().then(app_conf => {
+      this.ports = app_conf.ports
+      this.start();
+    })
   }
 
   /**
@@ -65,16 +70,10 @@ class PluginConnector extends EventEmitter {
 
     //////////////////////////////////////////////////////
     // for data source
-
-    // take out data message
     const dataSource = messageSource
       .filter( obj => obj.payload.slice(0, 4).toString() !== "SSG:")
-
-    // normalize data source, then emit 'message' event to controller
-    const subscribeDataSource = dataSource
       .subscribe( obj => {
         const data = {
-          type: 'data',
           handle_id: obj.handle_id,
           payload: obj.payload
         }
@@ -83,90 +82,53 @@ class PluginConnector extends EventEmitter {
 
     //////////////////////////////////////////////////////
     // for control source
-
-    // take out control message and normalize
     const controlSource = messageSource
       .filter( obj => obj.payload.slice(0, 4).toString() === "SSG:")
       .map( obj => {
         return {
           handle_id: obj.handle_id,
-          message: obj.payload.toString()
+          message: obj.payload.slice(4).toString()
         }
       })
-
-    // take out stream control message
-    const controlStreamSource = controlSource
-      .filter(obj => obj.message.indexOf("SSG:stream/") === 0)
-
-    // take out stream/start control message
-    const controlStreamStartSource = controlStreamSource
-      .filter(obj => obj.message.indexOf("SSG:stream/start") === 0)
-
-    // take out stream/stop control message
-    const controlStreamStopSource = controlStreamSource
-      .filter(obj => obj.message === "SSG:stream/stop")
-
-    // create internal messsage format to controller for strea/start, then emit 'message' event
-    const subscribeControlStreamStart = controlStreamStartSource
       .subscribe(obj => {
-        const arr = obj.message.split(",")
+        const strHandleId = obj.handle_id.toString("hex")
+        const t_m = obj.message.split("/")
 
-        if(arr.length === 2 && arr[1].length > 0) {
-          const data = {
-            type: 'control',
-            handle_id: obj.handle_id,
-            payload: {
-              type: 'request',
-              target: 'stream',
-              method: 'start',
-              body: {
-                handle_id: obj.handle_id,
-                src: arr[1]
-              }
-            }
-          }
-          this.emit('message', data);
+        const target = t_m[0]
+        let method, src, port, url
+
+        if(target === "stream" && t_m[1].match(/^start,.+$/)) {
+          var m_s = t_m[1].split(",")
+          method = m_s[0]
+          src    = m_s[1]
+          url = `http://localhost:${this.ports.SIGNALING_CONTROLLER}/stream/${strHandleId}?method=start&src=${src}`
+        } else if(target === "stream" && t_m[1] === "stop") {
+          method = t_m[1]
+          port   = this.ports.SIGNALING_CONTROLLER
+          url = `http://localhost:${this.ports.SIGNALING_CONTROLLER}/stream/${strHandleId}?method=stop`
+        } else if(target === "profile" && t_m[1] === "get") {
+          method = t_m[1]
+          port   = this.ports.PROFILE_MANAGER
+          url = `http://localhost:${this.ports.PROFILE_MANAGER}/profile/?handle_id=${strHandleId}`
         } else {
-          logger.warn("cannot find source peerid in stream/start")
+          return
         }
-      })
-
-    // create internal messsage format to controller for strea/stop, then emit 'message' event
-    const subscribeControlStreamStop = controlStreamStopSource
-      .subscribe(obj => {
-        const data = {
-          type: 'control',
-          handle_id: obj.handle_id,
-          payload: {
-            type: 'request',
-            target: 'stream',
-            method: 'stop',
-            body: {
-              handle_id: obj.handle_id
+        fetch(url)
+          .then(res => res.text())
+          .then(mesg => {
+            const _ret = {
+              "type": "response",
+              "target": target,
+              "method": method,
+              "status": 200
             }
-          }
-        }
-        this.emit('message', data);
-      })
+            let ret;
+            if(target === "profile") ret = Object.assign({}, _ret, {body: JSON.parse(mesg)})
+            else ret = _ret
 
-    const controlProfileGet = controlSource
-      .filter(obj => obj.message === "SSG:profile/get")
-      .subscribe( obj => {
-        const data = {
-          type: 'control',
-          handle_id: obj.handle_id,
-          payload: {
-            type: 'request',
-            target: 'profile',
-            method: 'get',
-            body: {
-              handle_id: obj.handle_id
-            }
-          }
-        }
-        this.emit('message', data)
+            this.send(obj.handle_id, "SSG:"+JSON.stringify(ret))
+          })
       })
-
     // error handling
     this.receiver.on('error', err => this.emit("error", err));
   }
@@ -175,23 +137,19 @@ class PluginConnector extends EventEmitter {
    * send message via udp
    *
    *
-   * @param {object} msg
-   * @param {string} msg.type - "data" or "control"
-   * @param {string} msg.handle_id - handle_id (16bytes)
-   * @param {object} msg.payload - Binary
+   * @param {Buffer} handle_id - handle_id (8bytes)
+   * @param {Buffer|object|string|number} data
    */
-  send( msg) {
-    new Array(msg)
-      .filter(msg => msg.type === 'data' || msg.type === 'control')
-      .filter(msg => typeof(msg.handle_id) === 'object')
-      .filter(msg => msg.handle_id.length === 8 || msg.handle_id.data.length === 8 )
-      .filter(msg => msg.payload instanceof Buffer)
-      .forEach(msg => {
-        if(!(msg.handle_id instanceof Buffer)) msg.handle_id = new Buffer(msg.handle_id)
+  send(handle_id, data) {
+    if(handle_id instanceof Buffer && handle_id.length === 8) {
+      let payload
 
-        const data = msg.type === 'data' ?  [msg.handle_id, msg.payload] : [msg.handle_id, 'SSG:', msg.payload];
-        this.sender.send(data, this.sender_port, this.sender_dest)
-      })
+      if(data instanceof Buffer) payload = data
+      else if(typeof(data) === 'object') payload = new Buffer(JSON.stringify(data))
+      else payload = new Buffer(data)
+
+      this.sender.send([handle_id, payload], this.sender_port, this.sender_dest)
+    }
   }
 }
 

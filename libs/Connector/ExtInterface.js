@@ -8,6 +8,7 @@
 const net = require('net')
 const Rx  = require('rx')
 const EventEmitter = require('events').EventEmitter
+const fetch = require('node-fetch')
 const log4js = require('log4js')
 const util = require('../miscs/util')
 
@@ -33,7 +34,12 @@ class ExtInterface extends EventEmitter {
     this.clients = [];
 
     // start server process
-    this.start()
+    util.loadAppYaml()
+      .then( app_conf => {
+        this.ports = app_conf.ports
+        this.start()
+      })
+      .catch(err => logger.warn(err.toString()))
   }
 
   /**
@@ -49,6 +55,7 @@ class ExtInterface extends EventEmitter {
       socket.on('end', () => {
         logger.info("socket for the 3rd party app closed. we'll remove this socket object")
         this.clients.splice(this.clients.indexOf(socket), 1)
+        logger.info(this.clients.length)
       })
 
       this._setExtDataObserver(socket)
@@ -59,33 +66,23 @@ class ExtInterface extends EventEmitter {
    * send message to 3rd party process
    * it will be forwarded to every single 3rd party app.
    *
-   * @param {object} data      - data object
-   * @param {string} data.type      - "data" or "control"
-   * @param {string} data.handle_id - handle id in hex format (16 bytes)
-   * @param {object} data.payload   - arbitrary data (Buffer instance)
+   * @param {buffer} handle_id - handle id in hex format (16 bytes)
+   * @param {object} data   - arbitrary data (Buffer instance)
    */
-  send(data) {
-    new Array(data)
-      .filter(data => typeof(data) === 'object')
-      .filter(data => data.type === 'data' || data.type === 'control')
-      .filter(data => data.handle_id instanceof Buffer)
-      .filter(data => data.handle_id.length === 8)
-      .forEach(data => {
-        let len = data.handle_id.length + data.payload.length
-        let payload
-        if(data.payload instanceof Buffer) {
-          payload = data.payload;
-        } else if(typeof(data.payload) === 'object') {
-          payload = new Buffer(JSON.stringify(data.payload))
-        } else {
-          payload = new Buffer(data.payload)
-        }
-        let buff = Buffer.concat([data.handle_id, payload], len)
+  send(handle_id, data) {
+    let payload
+    if(data.payload instanceof Buffer) {
+      payload = data
+    } else if(typeof(data.payload) === 'object') {
+      payload = new Buffer(JSON.stringify(data))
+    } else {
+      payload = new Buffer(data.payload)
+    }
+    let buff = Buffer.concat([data.handle_id, payload])
 
-        this.clients.forEach( socket => {
-          socket.write(buff)
-        })
-      })
+    this.clients.forEach( socket => {
+      socket.write(buff)
+    })
   }
 
   /**
@@ -136,7 +133,18 @@ class ExtInterface extends EventEmitter {
             }
           }
         }
-        this.emit('message', data);
+        fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/room/${obj.roomName}?method=${obj.method}`)
+          .then(res => res.text())
+          .then(mesg => {
+            const data = {
+              "type": "response",
+              "target": obj.target,
+              "method": obj.method,
+              "statuss": 200
+            }
+            this.send(util.CONTROL_ID, data)
+          })
+          .catch(logger.warn)
       });
 
     const dataSource = source
@@ -145,7 +153,6 @@ class ExtInterface extends EventEmitter {
     const subscribeDataSource = dataSource
       .subscribe( obj => {
         const data = {
-          type: "data",
           handle_id: obj.handle_id,
           payload: obj.payload
         }

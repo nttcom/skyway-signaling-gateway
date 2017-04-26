@@ -2,7 +2,6 @@ const PluginConnector = require('./Connector/Plugin')
 const ExtInterface = require('./Connector/ExtInterface')
 const Rx = require('rx')
 const EventEmitter = require('events').EventEmitter
-const redis = require('redis')
 const log4js = require('log4js')
 const logger = log4js.getLogger("DatachannelController")
 const util = require('./miscs/util')
@@ -31,7 +30,6 @@ class DatachannelController extends EventEmitter {
    *
    */
   start() {
-    this.setupRedis();
     this.setHandler();
   }
 
@@ -42,22 +40,6 @@ class DatachannelController extends EventEmitter {
   setHandler() {
     this._setPluginHandler();
     this._setExtHandler();
-  }
-
-  /**
-   * setup redis pub/sub
-   *
-   */
-  setupRedis() {
-
-    this.sub = redis.createClient()
-    this.pub = redis.createClient()
-    this.sub.subscribe(util.TOPICS.CONTROLLER_DATACHANNEL.key)
-
-    this.sub.on('subscribe', (channel) => {
-      logger.info(`topic ${channel} subscribed`)
-      this._setSubscriberHandler()
-    })
   }
 
   /**
@@ -77,24 +59,9 @@ class DatachannelController extends EventEmitter {
   _setPluginHandler() {
     const source = Rx.Observable.fromEvent(pluginConn, 'message')
 
-    const subscribeData = source.filter(msg => msg.type === "data")
-      .subscribe( msg => { extInterface.send(msg) } )
-
-    const subscribeControl = source.filter(msg => msg.type === "control")
-      .filter( msg => typeof(msg.payload) === 'object'  && typeof(msg.payload.target) === 'string' )
-      .subscribe( msg => {
-        let topic;
-        switch(msg.payload.target) {
-        case 'stream':
-          topic = util.TOPICS.CONTROLLER_SIGNALING.key
-          break
-        case 'profile':
-          topic = util.TOPICS.MANAGER_PROFILE.key
-          break
-        }
-        if(topic) this.pub.publish( topic, JSON.stringify(msg.payload) )
-      })
-      //.subscribe( msg => { this.pub.publish( util.TOPICS.CONTROLLER_SIGNALING.key, msg ) })
+    const subscribeData = source
+      .filter(msg => msg.handle_id instanceof Buffer && msg.handle_id.length === 8 && msg.payload)
+      .subscribe( msg => { extInterface.send(msg.handle_id, msg.payload) } )
   }
 
   /**
@@ -112,53 +79,8 @@ class DatachannelController extends EventEmitter {
       .filter(msg => typeof(msg) === 'object')
 
     const subscribeDataSource = source
-      .filter(msg => msg.type === 'data')
-      .subscribe(msg => { pluginConn.send(msg) });
-
-    const subscribeControlSource = source
-      .filter(msg => msg.type === 'control')
-      .subscribe( msg => {
-        try {
-          const msg_ = JSON.stringify(msg.payload)
-          this.pub.publish( util.TOPICS.CONTROLLER_SIGNALING.key, msg_ )
-        } catch(e) {
-        }
-      })
-  }
-
-  /**
-   * handler for Subscriber
-   *
-   * @method
-   * @listens SignalingController:control
-   * @param {object} data - json object
-   * @private
-   */
-  _setSubscriberHandler() {
-    this.sub.on('message', (channel, mesg) => {
-      logger.debug("message from redis", channel, mesg)
-      try {
-        const _mesg = JSON.parse(mesg);
-
-        if(_mesg.type === 'response' && _mesg.target === 'room') {
-          var data = {
-            type: "control",
-            handle_id: util.CONTROL_ID,
-            payload: _mesg
-          }
-          extInterface.send(data)
-        } else if(_mesg.type === 'response' && _mesg.target === 'profile') {
-          var data = {
-            type: "control",
-            handle_id: _mesg.body.handle_id,
-            payload: new Buffer(JSON.stringify(_mesg))
-          }
-          pluginConn.send(data)
-        }
-      } catch(e) {
-        logger.warn(e);
-      }
-    })
+      .filter(msg => msg.handle_id instanceof Buffer && msg.handle_id.length === 8 && msg.payload)
+      .subscribe(msg => { pluginConn.send(msg.handle_id, msg.payload) });
   }
 }
 

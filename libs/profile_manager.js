@@ -5,10 +5,13 @@
 
 const Rx = require('rx')
 const EventEmitter = require('events').EventEmitter
-const redis = require('redis')
 const log4js = require('log4js')
 const yaml = require('node-yaml')
 const uuid = require('uuid/v4') // random
+const express = require('express')
+const fetch = require('node-fetch')
+
+const app = express()
 const logger = log4js.getLogger("ProfileManager")
 const util = require('./miscs/util')
 
@@ -29,7 +32,12 @@ class ProfileManager extends EventEmitter {
    */
   start(){
     this.loadConf()
-      .then( () => this.setupRedis() )
+      .then( () => util.loadAppYaml() )
+      .then( (app_conf) => {
+        this.ports = app_conf.ports
+        this.setupRESTServer()
+      })
+      .catch( err => logger.warn(err) )
   }
 
   /**
@@ -60,72 +68,30 @@ class ProfileManager extends EventEmitter {
     })
   }
 
-
-
   /**
-   * setup redis pub/sub
+   * setup REST server
    *
    */
-  setupRedis() {
-    return new Promise( (resolve, reject) => {
-      this.sub = redis.createClient()
-      this.pub = redis.createClient()
+  setupRESTServer() {
+    app.get('/profile', (req, res) => {
+      const handle_id = req.query.handle_id
 
-      this.sub.subscribe(util.TOPICS.MANAGER_PROFILE.key)
+      fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/ssg_peerid`)
+        .then( res => res.text())
+        .then( ssg_peerid => {
+          const ret = Object.assign({}, this.profile, {ssg_peerid, handle_id})
+          res.send(ret)
+        })
+        .catch(err => {
+          logger.warn(err.toString())
+          res.status(500).send(err.toString())
+        })
+    })
 
-      this.sub.on('subscribe', (channel) => {
-        logger.info(`topic ${channel} subscribed`)
-        this._setSubscriberHandler()
-        resolve()
-      })
+    app.listen(this.ports.PROFILE_MANAGER, () => {
+      logger.info('start REST Server on port %d', this.ports.PROFILE_MANAGER)
     })
   }
-
-  /**
-   * setup redis subscriber handler
-   *
-   * @private
-   */
-  _setSubscriberHandler() {
-    this.sub.on('message', (channel, data) => {
-      if(channel !== util.TOPICS.MANAGER_PROFILE.key) return;
-
-      try {
-        const obj = JSON.parse(data)
-        let ret;
-
-        logger.debug('redis', obj)
-
-        if(obj.type === 'notify'
-            && obj.target === 'profile'
-            && obj.method === 'skyway_opened'
-            && typeof(obj.body) === 'object'
-            && obj.body.ssg_peerid
-            ) {
-          this.ssg_peerid = obj.body.ssg_peerid
-          logger.info("get notify message for peerid", this.ssg_peerid)
-        } else if(obj.type === 'request'
-            && obj.target === 'profile'
-            && obj.method === 'get'
-            && typeof(obj.body) === 'object'
-            && typeof(obj.body.handle_id) === 'object') {
-          var body = Object.assign({}, this.profile, {ssg_peerid: this.ssg_peerid, handle_id: obj.body.handle_id})
-          ret = {
-            type: "response",
-            target: "profile",
-            method: "get",
-            body: body
-          }
-          logger.debug('profile response', ret)
-          this.pub.publish(util.TOPICS.CONTROLLER_DATACHANNEL.key, JSON.stringify(ret))
-        }
-      } catch(e) {
-      }
-    })
-  }
-
-
-
 }
 
 module.exports = new ProfileManager()

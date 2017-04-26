@@ -1,7 +1,10 @@
 const md5 = require('md5')
 const EventEmitter = require("events").EventEmitter
-const redis = require('redis')
 const Rx = require('rx')
+const fetch = require('node-fetch')
+const express = require('express')
+
+const app = express()
 
 const _ = require('underscore')
 const log4js = require('log4js')
@@ -68,31 +71,18 @@ class SignalingController extends EventEmitter {
    *
    */
   start() {
-    this.sub = redis.createClient()
-    this.pub = redis.createClient()
-    this.sub.subscribe(util.TOPICS.CONTROLLER_SIGNALING.key)
-
-    this.sub.on('subscribe', (channel) => {
-      logger.info(`topic ${channel} subscribed`)
-      this.setSubscriberHandler()
-    })
-    this.skyway = new Skyway(this.apikey, this.options, this)
-
-    this.skyway.on("opened", peerid => {
-      const notify = {
-        type: "notify",
-        target: "profile",
-        method: "skyway_opened",
-        body: {
-          "ssg_peerid": peerid
-        }
-      }
-      this.pub.publish(util.TOPICS.MANAGER_PROFILE.key, JSON.stringify(notify))
-
-      this.setSkywayHandler()
-      this.setJanusHandler()
-    })
-  }
+    util.loadAppYaml()
+      .then( app_conf => {
+        this.ports = app_conf.ports
+        this.skyway = new Skyway(this.apikey, this.options, this)
+        this.skyway.on("opened", peerid => {
+          this.setSkywayHandler()
+          this.setJanusHandler()
+          this.setupRESTServer()
+        })
+      })
+      .catch(err => logger.warn(err))
+ }
 
   /**
    * set skyway handlers
@@ -149,10 +139,6 @@ class SignalingController extends EventEmitter {
         this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
       }
     })
-
-    Rx.Observable.fromEvent(this.skyway, "message")
-      .filter(mesg => mesg.type === "response" && mesg.target === "room")
-      .subscribe(mesg => { this.pub.publish(util.TOPICS.CONTROLLER_DATACHANNEL.key, JSON.stringify(mesg)) })
   }
 
   /**
@@ -236,56 +222,6 @@ class SignalingController extends EventEmitter {
   }
 
   /**
-   * set redis subscriber handler
-   */
-  setSubscriberHandler() {
-    this.sub.on('message', (channel, data) => {
-      logger.debug("message from redis", channel, data)
-      try {
-        const _data = JSON.parse(data)
-        console.log(_data)
-        if(_data.type !== 'request') return;
-        switch(_data.target) {
-        case 'stream':
-          this.handleStreaming(_data)
-          break;
-        case 'room':
-          this.handleRoom(_data)
-          break;
-        default:
-          break;
-        }
-      } catch(e) {
-        logger.warn(e)
-      }
-    })
-  }
-
-  /**
-   * handle streaming request
-   *
-   * @param {object} data
-   * @param {string} data.type - "request"
-   * @param {string} data.target - "stream"
-   * @param {string} data.method - "start" or "stop"
-   * @param {object} data.body
-   * @param {string} data.body.handle_id
-   * @param {string} [data.body.src] - source peer id (available when method is start)
-   */
-  handleStreaming(data) {
-    switch(data.method) {
-    case 'start':
-      this.startStreaming(data.body.handle_id, data.body.src)
-      break;
-    case 'stop':
-      this.stopStreaming(data.body.handle_id);
-      break;
-    default:
-      break;
-    }
-  }
-
-  /**
    * start streaming plugin
    *
    * @param {string} handle_id - handle id (identifier for data channel)
@@ -330,49 +266,6 @@ class SignalingController extends EventEmitter {
 
     if(connection_id !== "") this.ssgStore.dispatch(requestStreamingStop(connection_id))
   }
-
-  /**
-   * handle room api
-   *
-   * @param {object} data
-   * @param {string} data.type - "request"
-   * @param {string} data.target - "room"
-   * @param {string} data.method - "join" or "leave"
-   * @param {object} data.body
-   * @param {string} data.body.roomName
-   */
-  handleRoom(data) {
-    switch(data.method) {
-    case 'join':
-      this.sendRoomJoin(data.body.roomName)
-      break;
-    case 'leave':
-      this.sendRoomLeave(data.body.roomName)
-      break;
-    default:
-      break;
-    }
-  }
-
-
-  /**
-   * sendRoomJoin
-   *
-   * @param {string} name - room name
-   */
-  sendRoomJoin(name) {
-    this.skyway.sendRoomJoin(name)
-  }
-
-  /**
-   * sendRoomLeave
-   *
-   * @param {string} name - room name
-   */
-  sendRoomLeave(name) {
-    this.skyway.sendRoomLeave(name)
-  }
-
 
   /**
    * get connection id from handle_id
@@ -426,6 +319,84 @@ class SignalingController extends EventEmitter {
    */
   setPairOfPeerids(connection_id, src, dst) {
     this.ssgStore.dispatch(setPairOfPeerids(connection_id, src, dst));
+  }
+
+  /**
+   * setup REST Server
+   *
+   */
+  setupRESTServer() {
+    app.get('/ssg_peerid', (req, res) => {
+      res.send(this.skyway.myPeerid)
+    })
+
+    // /stream/:handle_id?method=[start|stop]&src=${src_peerid}
+    app.get('/stream/:handle_id', (req, res) => {
+      const handle_id = req.params.handle_id
+      const method    = req.query.method
+      const src       = req.query.src
+
+      if( !handle_id.match(/^[0-9a-fA-F]{16}$/) || !((method==="start" && src.length > 4) || (method === "stop")) ){
+        let message = "invalid queries: " + JSON.stringify({handle_id, method, src})
+        logger.warn(message)
+        res.status(400).send(message)
+
+        return
+      }
+
+      switch(method) {
+      case 'start':
+        this.startStreaming(handle_id, src)
+        break;
+      case 'stop':
+        this.stopStreaming(handle_id)
+        break;
+      default:
+      }
+
+      res.send('ok')
+    })
+
+    app.get('/room/:name', (req, res) => {
+      const method = req.query.method
+      const name   = req.params.name
+
+      if(!method.match(/^(join|leave)$/) || !(name.length > 2)) {
+        let mesg = 'invalid queries: ' + JSON.stringify({method, name})
+        logger.warn(mesg)
+        res.status(400).send(mesg)
+        return
+      }
+
+      switch(method) {
+      case 'join':
+        this.skyway.sendRoomJoin(name)
+        break
+      case 'leave':
+        this.skyway.sendRoomLeave(name)
+        break
+      default:
+        break
+      }
+
+      res.send('ok')
+    })
+
+    app.get('/connections', (req, res) => {
+      const {connections} = this.ssgStore.getState().sessions
+      res.json(connections)
+    })
+
+    app.get('/connection/:id', (req, res) => {
+      const id = req.params.id
+      const {connections} = this.ssgStore.getState().sessions
+
+      res.json(connections[id])
+    })
+
+    app.listen(this.ports.SIGNALING_CONTROLLER, () => {
+      logger.info(`start REST Server on port ${this.ports.SIGNALING_CONTROLLER}`)
+    })
   }
 }
 

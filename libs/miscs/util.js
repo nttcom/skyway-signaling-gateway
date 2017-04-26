@@ -1,7 +1,8 @@
 const _    = require('underscore')
 const Enum = require('enum')
+const yaml = require('node-yaml')
 
-
+const APP_YAML = __dirname + '/../../conf/app.yaml'
 
 const clientMessages = new Enum([
     'SEND_OFFER',
@@ -56,6 +57,7 @@ util.TOPICS = new Enum([
   'MANAGER_PROFILE'
 ]);
 
+
 // create token
 util.randomTokenForSkyway = function() {
   return Math.random().toString(36).substr(2);
@@ -89,6 +91,20 @@ util.createConnectionId = function( type = "media" /* "media" or "data" */) {
 
 util.createTransactionId = function() {
   return util.randomStringForJanus(12);
+}
+
+util.loadAppYaml = function() {
+  return new Promise((resolv, reject) => {
+    yaml.read(APP_YAML, (err, data) => {
+      if(err) {
+        logger.warn(err)
+        reject()
+      } else {
+        if( data.hasOwnProperty('ports') ) resolv(data)
+        else reject(new Error('app_yaml does not have ports property'))
+      }
+    })
+  })
 }
 
 module.exports = util
