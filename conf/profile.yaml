@@ -1,12 +1,38 @@
 name: raspi205
 topics:
   - name: temperature
-    title: cpu temperature
+    title: temperature
     type: json
     properties:
-      - name: value
+      - name: cpu
         type: number
-        description: current temperature
+        description: cpu temperature
+  - name: cpu
+    title: cpu usage
+    type: json
+    properties:
+      - name: 1min
+        type: number
+        description: average in 1 minutes
+      - name: 5min
+        type: number
+        description: average in 5 minutes
+      - name: 15min
+        type: number
+        description: average in 15 minutes
+  - name: memory
+    title: memory usage
+    type: json
+    properties:
+      - name: free
+        type: number
+        description: free memory
+      - name: total
+        type: number
+        description: total memory
+      - name: used
+        type: number
+        description: used memory
 uuid: 3f6f6873-8191-44d9-a229-bb652884dd61
 streaming:
   enable: true
