@@ -8,6 +8,8 @@ const log4js = require('log4js')
 const Int64  = require('node-int64')
 const Rx     = require('rx')
 const fetch  = require('node-fetch')
+const express = require('express')
+const app    = express()
 
 const CONF   = require('../../conf/janus.json')
 
@@ -30,6 +32,7 @@ class PluginConnector extends EventEmitter {
     this.receiver_port = CONF['data_receiver']['port']
     this.sender_dest = CONF['endpoint_addr']
     this.sender_port = CONF['data_sender']['port']
+    this.timestamps = {} // {${peerid}: timestamp}
 
     logger.debug(`sender ${this.sender_dest}:${this.sender_port}, receiver port ${this.receiver_port}`)
 
@@ -47,6 +50,7 @@ class PluginConnector extends EventEmitter {
    *
    */
   start() {
+    this.startRESTServer()
     this.receiver.bind({address: "0.0.0.0", port: this.receiver_port}, () => {
       logger.info(`succeeded to bind port ${this.receiver_port}`);
       this.setRecieveHandler();
@@ -129,6 +133,31 @@ class PluginConnector extends EventEmitter {
             this.send(obj.handle_id, "SSG:"+JSON.stringify(ret))
           })
       })
+
+    const keepaliveSubscriber = messageSource
+      .filter(obj => obj.payload.slice(0, 13).toString() === 'SSG:keepalive')
+      .map(obj => obj.payload.toString().split(",")[1])
+      .subscribe(src => {
+        if(!!src) { this.timestamps[src] = Date.now() }
+      })
+
+    const keepaliveTimer = Rx.Observable.interval(10000)
+      .subscribe( () => {
+        for(var id in this.timestamps) if(this.timestamps.hasOwnProperty(id)) {
+          var ts = this.timestamps[id]
+          var diff = Date.now() - ts
+          logger.debug(`${id}: timestamp ${ts}, diff ${diff}/${util.KEEPALIVE_TIMEOUT}`)
+          if( diff > util.KEEPALIVE_TIMEOUT ) {
+            fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/connection/${id}`, {method: 'DELETE'})
+              .then(res => res.text())
+              .then(mesg => {
+                delete this.timestamps[id]
+                if(mesg === 'ok') logger.info(`connection for ${id} removed`)
+                else logger.warn(`connection remove for ${id} failed`)
+              })
+          }
+        }
+      })
     // error handling
     this.receiver.on('error', err => this.emit("error", err));
   }
@@ -150,6 +179,20 @@ class PluginConnector extends EventEmitter {
 
       this.sender.send([handle_id, payload], this.sender_port, this.sender_dest)
     }
+  }
+
+  /**
+   * start REST server
+   *
+   */
+  startRESTServer() {
+    app.get('/timestamps', (req, res) => {
+      res.json(this.timestamps)
+    })
+
+    app.listen(this.ports.PLUGIN_CONNECTOR, () => {
+      logger.info("start REST server on port : ", this.ports.PLUGIN_CONNECTOR)
+    })
   }
 }
 

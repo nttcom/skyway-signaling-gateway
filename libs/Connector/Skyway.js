@@ -248,8 +248,8 @@ class SkywayConnector extends EventEmitter {
         logger.info("closed connection with SkyWay")
         break;
       case util.MESSAGE_TYPES.SERVER.ERROR.key:
-        this._changeStatus("error")
-        logger.warn(data)
+        this._changeStatus("server_error")
+        logger.warn("server error")
         break;
       default:
         logger.warn(`unknown message [${mesg.type}]`)

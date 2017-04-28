@@ -57,6 +57,8 @@ util.TOPICS = new Enum([
   'MANAGER_PROFILE'
 ]);
 
+util.KEEPALIVE_TIMEOUT = 90000  // 90 seconds
+
 
 // create token
 util.randomTokenForSkyway = function() {

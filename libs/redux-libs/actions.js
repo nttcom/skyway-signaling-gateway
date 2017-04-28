@@ -22,8 +22,11 @@ const SET_PLUGIN = 'SET_PLUGIN'
 const SET_BUFFER_CANDIDATES = 'SET_BUFFER_CANDIDATES'
 const SET_HANDLE_ID = 'SET_HANDLE_ID'
 const SET_PAIR_OF_PEERIDS = 'SET_PAIR_OF_PEERIDS'
+const REMOVE_CONNECTION = 'REMOVE_CONNECTION'
 
 const PUSH_TRICKLE = 'PUSH_TRICKLE'
+
+
 
 // constants for status
 const REQUEST_CREATE_ID = 'REQUEST_CREATE_ID'
@@ -226,7 +229,18 @@ function receiveJanus(connection_id, janus_type, transaction, jsonBody) {
   }
 }
 
-
+/**
+ * This will be called when Signaling Controller receive DELETE connection request
+ * from Plugin Connector
+ *
+ * @param {string} src - src peerid
+ */
+function removeConnection(src) {
+  return {
+    type: REMOVE_CONNECTION,
+    src
+  }
+}
 
 
 
@@ -688,6 +702,7 @@ module.exports = {
   SET_BUFFER_CANDIDATES,
   SET_PAIR_OF_PEERIDS,
   PUSH_TRICKLE,
+  REMOVE_CONNECTION,
   requestMediatype,
   requestAttach,
   requestCreateId,
@@ -706,5 +721,6 @@ module.exports = {
   setPairOfPeerids,
   setPlugin,
   requestJanus,
-  receiveJanus
+  receiveJanus,
+  removeConnection
 }

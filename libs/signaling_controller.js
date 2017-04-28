@@ -41,7 +41,8 @@ const {
   pushTrickle,
   setBufferCandidates,
   setHandleId,
-  setPairOfPeerids
+  setPairOfPeerids,
+  removeConnection
 } = require('./redux-libs/actions')
 
 const util = require('./miscs/util')
@@ -379,6 +380,13 @@ class SignalingController extends EventEmitter {
         break
       }
 
+      res.send('ok')
+    })
+
+    app.delete('/connection/:peerid', (req, res) => {
+      const peerid = req.params.peerid
+
+      this.ssgStore.dispatch(removeConnection(peerid))
       res.send('ok')
     })
 

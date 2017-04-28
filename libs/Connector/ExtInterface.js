@@ -71,14 +71,14 @@ class ExtInterface extends EventEmitter {
    */
   send(handle_id, data) {
     let payload
-    if(data.payload instanceof Buffer) {
+    if(data instanceof Buffer) {
       payload = data
-    } else if(typeof(data.payload) === 'object') {
+    } else if(typeof(data) === 'object') {
       payload = new Buffer(JSON.stringify(data))
     } else {
-      payload = new Buffer(data.payload)
+      payload = new Buffer(data)
     }
-    let buff = Buffer.concat([data.handle_id, payload])
+    let buff = Buffer.concat([handle_id, payload])
 
     this.clients.forEach( socket => {
       socket.write(buff)

@@ -34,6 +34,7 @@ const {
     SET_BUFFER_CANDIDATES,
     SET_PAIR_OF_PEERIDS,
     PUSH_TRICKLE,
+    REMOVE_CONNECTION
 } = require('./actions')
 
 
@@ -126,6 +127,23 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null, lastA
         lastUpdatedConnection: action.connection_id,
         connections
       })
+      break;
+    case REMOVE_CONNECTION:
+      var connection_id = _getConnectionId(state.connections, action.src)
+
+      if(connection_id) {
+        delete state.connections[connection_id]
+
+        var connections = Object.assign({}, state.connections);
+        return Object.assign({}, state, {
+          lastAction: action.type,
+          lastUpdatedConnection: connection_id,
+          connections
+        })
+      } else {
+        return state;
+      }
+      break;
     default:
       return state
   }
@@ -138,6 +156,26 @@ function sessions(state = { connections : {}, lastUpdatedConnection: null, lastA
     connections
   })
 
+}
+
+/**
+ * utility function
+ *
+ */
+
+/**
+ * get connection id from peerid
+ *
+ * @param {object} connections - connections object
+ * @param {string} peerid - peerid
+ * @private
+ */
+function _getConnectionId(connections, peerid) {
+  for(var id in connections) if(connections.hasOwnProperty(id)) {
+    var conn = connections[id]
+    if(conn.peerids && conn.peerids.client === peerid) return id
+  }
+  return null
 }
 
 /**

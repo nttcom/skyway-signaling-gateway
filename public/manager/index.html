@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <p>
+      <a href="http://localhost:8080/examples" target="_blank">example</a>
+    </p>
+    <h2>profile</h2>
+    <div id="profile"><pre></pre></div>
+    <h2>connections</h2>
+    <div id="connections"><pre></pre></div>
+    <h2>timestamps on PluginConnector</h2>
+    <div id="timestamps-plugin"><pre></pre></div>
+  </body>
+
+<script>
+fetch("/profile")
+  .then(res => res.json())
+  .then(obj => $("#profile").find("pre").text(JSON.stringify(obj, null, "  ")))
+
+fetch("/connections")
+  .then(res => res.json())
+  .then(obj => {
+    let out = {}
+    for (let key in obj ) out[key] = obj[key].status
+    $("#connections").find("pre").text(JSON.stringify(out, null, "  "))
+  })
+
+fetch("/plugin/timestamps")
+  .then(res => res.json())
+  .then(obj => $("#timestamps-plugin").find("pre").text(JSON.stringify(obj, null, "  ")))
+</script>
+</html>
