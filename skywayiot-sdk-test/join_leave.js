@@ -6,9 +6,11 @@
 const net = require('net')
 const util = require('../libs/miscs/util')
 const log4js = require('log4js')
+const fetch  = require('node-fetch')
 const os   = require('os')
 const fs   = require('fs')
 const Rx   = require('rx')
+const _    = require('underscore')
 
 const logger = log4js.getLogger('join-leave')
 
@@ -24,15 +26,30 @@ const MESG = {
 
 
 
-let client = new net.Socket()
+var client = new net.Socket()
+var profile
+var subscribes = []
+
+function subscribe(topic) {
+  subscribes.push(topic)
+  subscribes = _.uniq(subscribes)
+}
 
 client.connect(port, '127.0.0.1')
 
 client.on('connect', () => {
   logger.info("connected to ssg");
 
+  fetch('http://localhost:3000/profile')
+    .then( res => res.json() )
+    .then( json => {
+      profile = json
+    })
+
   const joindata = Buffer.concat([util.CONTROL_ID, MESG.JOIN])
   const leavedata = Buffer.concat([util.CONTROL_ID, MESG.LEAVE])
+
+  subscribe('presence')
 
   logger.info("send join")
   client.write(joindata)
@@ -54,15 +71,36 @@ function send(topic, payload) {
 client.on('data', (buff) => {
   let handle_id = buff.slice(0, 8)
   let data = buff.slice(8).toString();
+  let data_
 
-  logger.debug(`recv - ${handle_id.toString("hex")}: ${data}`)
-  const mesg_uni = JSON.stringify({"topic": "presence", "payload": "unicast echo"})
-  const mesg_broad = JSON.stringify({"topic": "presence", "payload": "broadcast echo"})
-  const echo_uni   = Buffer.concat([handle_id, new Buffer(mesg_uni)])
-  client.write(echo_uni)
+  try {
+    data_ = JSON.parse(data)
+  } catch(e) {
+    throw e
+  }
+
+
+  const topic = data_.topic
+  const payload = data_.payload
+
+  logger.debug(`recv - ${handle_id.toString("hex")}: ${data_.topic}`)
+
+  subscribes.filter( t_ => t_ === topic )
+    .forEach( t => {
+      logger.debug(`topic: ${t}`)
+      const echo = {"topic": t, "payload": "echo"}
+      client.write(Buffer.concat([handle_id, new Buffer(JSON.stringify(echo))]))
+    })
+
+  if( profile && topic == profile.uuid ) {
+    logger.debug(`uuid: ${topic}`)
+    setTimeout(e => {
+      client.write(Buffer.concat([handle_id, new Buffer(JSON.stringify({topic: topic, "payload": "hello " + Date.now()}))]))
+    }, 100)
+  }
 })
 
-const keepaliveTimer = Rx.Observable.interval(1000)
+const sendMetricTimer = Rx.Observable.interval(1000)
   .subscribe(() => {
     const freemem  = os.freemem();
     const totalmem = os.totalmem();
