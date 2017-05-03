@@ -1,13 +1,7 @@
 name: raspi205
+description: remote test camera at Palo Alto
 topics:
-  - name: temperature
-    title: temperature
-    type: json
-    properties:
-      - name: cpu
-        type: number
-        description: cpu temperature
-  - name: cpu
+  - name: raspi205/cpu
     title: cpu usage
     type: json
     properties:
@@ -20,7 +14,7 @@ topics:
       - name: 15min
         type: number
         description: average in 15 minutes
-  - name: memory
+  - name: raspi205/memory
     title: memory usage
     type: json
     properties:
