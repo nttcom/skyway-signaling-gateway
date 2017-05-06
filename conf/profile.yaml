@@ -27,6 +27,13 @@ topics:
       - name: used
         type: number
         description: used memory
+  - name: raspi205/temperature
+    title: device temperature
+    type: json
+    properties:
+      - name: cpu
+        type: number
+        description: cpu temperature
 uuid: 3f6f6873-8191-44d9-a229-bb652884dd61
 streaming:
   enable: true
