@@ -3,7 +3,7 @@ const DatachannelController = require('./libs/datachannel_controller')
 const ProfileManager = require('./libs/profile_manager')
 const webserver = require('./libs/webserver')
 
-// ignore error of self signed tls connection
+// ignore error for self signed tls connection
 process.env.NODE_TLS_REJECT_UNAUTHORIZED="0"
 
 // start ProfileManager

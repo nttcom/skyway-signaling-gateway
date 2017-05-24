@@ -108,7 +108,7 @@ class Socket extends EventEmitter {
       this._io.on('error', e => {
         this.emit(util.MESSAGE_TYPES.SERVER.ERROR.key)
       });
-        this._setupMessageHandlers()
+      this._setupMessageHandlers()
     });
   }
 
@@ -146,9 +146,7 @@ class Socket extends EventEmitter {
         timeout: this.DISPATCHER_TIMEOUT
       };
       fetch(url, options)
-        .then( res  => {
-          return res.json()}
-        )
+        .then( res  => res.json())
         .then( json => {
           if( json && json.domain ) {
             resolve({host: json.domain, port: 443, secure: true})

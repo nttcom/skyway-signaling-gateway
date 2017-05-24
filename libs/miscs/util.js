@@ -58,6 +58,7 @@ util.TOPICS = new Enum([
 ]);
 
 util.KEEPALIVE_TIMEOUT = 90000  // 90 seconds
+util.pingInterval = 25000 // 25 seconds
 
 
 // create token
