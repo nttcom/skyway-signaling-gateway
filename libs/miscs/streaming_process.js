@@ -19,7 +19,7 @@ class StreamingProcess {
     this.streaming_process = STREAMING_PROCESS.split(" ")[0]
     this.args = STREAMING_PROCESS.split(" ").slice(1)
     this.childProcess = null
-    this.disable = process.env.DISABLE_AUTO_STREAMING === 'true'
+    this.disable = process.env.ENABLE_AUTO_STREAMING !== 'true'
 
     logger.setLevel(loglevel)
 

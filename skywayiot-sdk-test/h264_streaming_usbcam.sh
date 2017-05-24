@@ -39,6 +39,7 @@ trap 'pkill raspivid; pkill gst-launch-1.0' EXIT
 # autoaudiosrc ! audioconvert ! \
 # alsasrc device=hw:1 ! audioconvert ! \
 # videotestsrc | rpicamsrc
+# audiotestsrc ! \
 
 # to avoid hw:1 as busy, call 'arecord'
 # arecord -l
@@ -53,7 +54,8 @@ gst-launch-1.0 v4l2src device=/dev/video0 ! \
   omxh264enc target-bitrate=2000000 control-rate=variable ! \
   h264parse ! rtph264pay config-interval=1 pt=96 ! \
     udpsink host=127.0.0.1 port=5004 \
-audiotestsrc ! \
+alsasrc device=hw:1 ! \
+  volume volume=10 ! audioconvert ! \
   queue ! audioresample ! \
   audioconvert ! queue ! \
   audio/x-raw,channels=1,rate=16000 ! \

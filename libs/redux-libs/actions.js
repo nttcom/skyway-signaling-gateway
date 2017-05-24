@@ -7,6 +7,8 @@ const CONF = require('../../conf/janus.json')
 const fetch = require('isomorphic-fetch')
 const util  = require('../miscs/util')
 const _     = require('underscore')
+const log4js = require('log4js')
+const logger = log4js.getLogger('redux-action')
 
 const ENDPOINT = CONF['rest_scheme'] + "://" + CONF['endpoint_addr'] + ":" + CONF['rest_port']
 
