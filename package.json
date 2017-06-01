@@ -16,7 +16,7 @@
     "janus"
   ],
   "author": "kensaku komatsu",
-  "license": "MIT",
+  "license": "Apache 2.0",
   "dependencies": {
     "ejs": "^2.5.3",
     "enum": "^2.4.0",
@@ -40,19 +40,7 @@
     "ws": "^1.1.1"
   },
   "devDependencies": {
-    "babel-core": "^6.17.0",
-    "babel-loader": "^6.2.5",
-    "babel-polyfill": "^6.16.0",
-    "babel-preset-es2015": "^6.16.0",
-    "babel-preset-react": "^6.16.0",
-    "jest": "^17.0.3",
-    "json-loader": "^0.5.4",
-    "nock": "^9.0.2",
-    "react": "^15.3.2",
-    "react-dom": "^15.3.2",
-    "react-redux": "^4.4.5",
-    "redux-mock-store": "^1.2.1",
-    "webpack": "^1.13.2"
+    "jest": "^17.0.3"
   },
   "bugs": {
     "url": "https://github.com/eastandwest/signalling-gateway/issues"

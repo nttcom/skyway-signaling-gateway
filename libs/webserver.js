@@ -7,7 +7,9 @@ const fetch = require('node-fetch')
 const util = require('./miscs/util')
 
 const logger = log4js.getLogger('webserver')
-const skyway_conf = require('../conf/skyway.json')
+
+const yaml = require('node-yaml')
+const skyway_conf = yaml.readSync('../conf/skyway.yaml')
 
 app.use(express.static(__dirname+'/../public'));
 

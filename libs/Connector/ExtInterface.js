@@ -14,7 +14,8 @@ const util = require('../miscs/util')
 
 const logger = log4js.getLogger('ExtInterface')
 
-const CONF = require('../../conf/janus.json')
+const yaml = require('node-yaml')
+const CONF = yaml.readSync('../../conf/janus.yaml')
 const port = CONF['external']['tcp_port']
 
 

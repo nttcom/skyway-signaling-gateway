@@ -11,7 +11,8 @@ const fetch  = require('node-fetch')
 const express = require('express')
 const app    = express()
 
-const CONF   = require('../../conf/janus.json')
+const yaml   = require('node-yaml')
+const CONF   = yaml.readSync('../../conf/janus.yaml')
 
 const logger = log4js.getLogger('PluginConnector')
 const util = require('../miscs/util')

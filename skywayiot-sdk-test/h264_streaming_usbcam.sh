@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# this script is for streaming out the h264 from raspicam
+# this script is for streaming out the h264 media from usbcam
 # please be sure that to set 'Enable Camera' on raspi-config
 # before running this gstreamer1.0 script
 
@@ -22,7 +22,8 @@
 # videofmtp = profile-level-id=42e028\;packetization-mode=1
 
 # kill child processes, when SIGTERM or SIGINT catched
-trap 'pkill raspivid; pkill gst-launch-1.0' EXIT
+# when ENABLE_AUTO_STREAMING=true, it should be uncommented
+# trap 'pkill raspivid; pkill gst-launch-1.0' EXIT
 
 # execute gstreamer with raspicam
 # below needs
@@ -34,18 +35,10 @@ trap 'pkill raspivid; pkill gst-launch-1.0' EXIT
 #  make
 #  sudo make install
 
-# about gst-rpicamsrc, see more detail at https://github.com/thaytan/gst-rpicamsrc
+# for gst-rpicamsrc, see more detail at https://github.com/thaytan/gst-rpicamsrc
 
-# autoaudiosrc ! audioconvert ! \
-# alsasrc device=hw:1 ! audioconvert ! \
 # videotestsrc | rpicamsrc
 # audiotestsrc ! \
-
-# to avoid hw:1 as busy, call 'arecord'
-# arecord -l
-# alsasrc device=hw:1 volume=10 ! \
-# alsasrc device=hw:1 ! \
-#  volume volume=8 ! \
 
 # start streaming
 gst-launch-1.0 v4l2src device=/dev/video0 ! \

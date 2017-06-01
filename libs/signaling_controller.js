@@ -15,8 +15,10 @@ const Skyway = require('./Connector/Skyway')
 const streaming_process = require('./miscs/streaming_process')
 const sdp = require('./miscs/sdp')
 
-const CONF = require('../conf/skyway.json')
-const JANUS_CONF = require('../conf/janus.json')
+const yaml = require('node-yaml')
+
+const CONF = yaml.readSync('../conf/skyway.yaml')
+const JANUS_CONF = yaml.readSync('../conf/janus.yaml')
 
 const {
   RESPONSE_CREATE_ID,

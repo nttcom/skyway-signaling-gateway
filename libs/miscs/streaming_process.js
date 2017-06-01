@@ -6,8 +6,9 @@ const _ = require('underscore')
 const log4js = require('log4js')
 const logger = log4js.getLogger('streaming_process')
 
+const yaml = require('node-yaml')
+const JANUS_CONF = yaml.readSync('../../conf/janus.yaml');
 
-const JANUS_CONF = require('../../conf/janus.json');
 const STREAMING_PROCESS = JANUS_CONF['streaming_process']
 
 class StreamingProcess {

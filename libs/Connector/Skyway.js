@@ -8,7 +8,8 @@ const { setPairOfPeerids } = require('../redux-libs/actions')
 const logger = log4js.getLogger('SkyWayConnector');
 
 const util = require("../miscs/util")
-const CONF = require('../../conf/skyway.json')
+const yaml = require('node-yaml')
+const CONF = yaml.readSync('../../conf/skyway.yaml')
 
 
 class SkywayConnector extends EventEmitter {
