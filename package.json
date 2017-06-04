@@ -1,12 +1,12 @@
 {
-  "name": "signaling_gateway",
+  "name": "skyway-signaling-gateway",
   "version": "0.5.1",
-  "description": "A bridging gateway module for WebRTC signaling servers",
+  "description": "A protocol gateway between Janus Gateway REST API and SkyWay Signaling Server",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eastandwest/signalling-gateway.git"
+    "url": "git+https://github.com/nttcom/skyway-signaling-gateway.git"
   },
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "test": "jest",
     "test:watch": "npm test -- --watch"
@@ -15,7 +15,10 @@
     "webrtc",
     "janus"
   ],
-  "author": "kensaku komatsu",
+  "author": {
+    "name": "NTT Communications",
+    "url": "http://skyway.io/en"
+  },
   "license": "Apache 2.0",
   "dependencies": {
     "ejs": "^2.5.3",
@@ -43,9 +46,9 @@
     "jest": "^17.0.3"
   },
   "bugs": {
-    "url": "https://github.com/eastandwest/signalling-gateway/issues"
+    "url": "https://github.com/nttcom/skyway-signaling-gateway/issues"
   },
-  "homepage": "https://github.com/eastandwest/signalling-gateway#readme",
+  "homepage": "https://github.com/nttcom/skyway-signaling-gateway#readme",
   "directories": {
     "test": "test"
   }
