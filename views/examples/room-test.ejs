@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <script src='/js/skywayPubSub.js'></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  </head>
+  <body>
+        <button>send hello world</button>
+
+            <div id="output"></div>
+                <script>
+
+const client = new skPubSub('testroom', {key: '<%= apikey %>', debug: 0})
+client.on('connect', () => {
+  $("#output").html("<b>connection established for skPubSub</b><br><ul id='list'></ul>")
+    client.subscribe('presence')
+    $("button").on("click", ev => {
+      client.publish('presence', `${client.myid}:hello world.`)
+    })
+})
+client.on('message', (topic, mesg) => {
+  $("#list").append(`<li>${topic} - ${mesg}</li>`)
+})
+
+                </script>
+  </body>
+</html>

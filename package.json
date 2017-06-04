@@ -1,12 +1,12 @@
 {
-  "name": "signaling_gateway",
-  "version": "0.4.3",
-  "description": "A bridging gateway module for WebRTC signaling servers",
+  "name": "skyway-signaling-gateway",
+  "version": "0.5.1",
+  "description": "A protocol gateway between Janus Gateway REST API and SkyWay Signaling Server",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eastandwest/signalling-gateway.git"
+    "url": "git+https://github.com/nttcom/skyway-signaling-gateway.git"
   },
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "test": "jest",
     "test:watch": "npm test -- --watch"
@@ -15,41 +15,40 @@
     "webrtc",
     "janus"
   ],
-  "author": "kensaku komatsu",
-  "license": "MIT",
+  "author": {
+    "name": "NTT Communications",
+    "url": "http://skyway.io/en"
+  },
+  "license": "Apache 2.0",
   "dependencies": {
     "ejs": "^2.5.3",
+    "enum": "^2.4.0",
     "express": "^4.14.0",
     "isomorphic-fetch": "^2.2.1",
     "log4js": "^0.6.38",
     "md5": "^2.2.1",
+    "node-fetch": "^1.6.3",
     "node-int64": "^0.4.0",
+    "node-yaml": "^3.0.3",
+    "redis": "^2.7.1",
     "redux": "^3.6.0",
     "redux-actions": "^0.12.0",
     "redux-logger": "^2.7.0",
     "redux-thunk": "^2.1.0",
+    "rx": "^4.1.0",
+    "socket.io": "^1.7.3",
+    "socket.io-client": "^1.7.3",
     "underscore": "^1.8.3",
+    "uuid": "^3.0.1",
     "ws": "^1.1.1"
   },
   "devDependencies": {
-    "babel-core": "^6.17.0",
-    "babel-loader": "^6.2.5",
-    "babel-polyfill": "^6.16.0",
-    "babel-preset-es2015": "^6.16.0",
-    "babel-preset-react": "^6.16.0",
-    "jest": "^17.0.3",
-    "json-loader": "^0.5.4",
-    "nock": "^9.0.2",
-    "react": "^15.3.2",
-    "react-dom": "^15.3.2",
-    "react-redux": "^4.4.5",
-    "redux-mock-store": "^1.2.1",
-    "webpack": "^1.13.2"
+    "jest": "^17.0.3"
   },
   "bugs": {
-    "url": "https://github.com/eastandwest/signalling-gateway/issues"
+    "url": "https://github.com/nttcom/skyway-signaling-gateway/issues"
   },
-  "homepage": "https://github.com/eastandwest/signalling-gateway#readme",
+  "homepage": "https://github.com/nttcom/skyway-signaling-gateway#readme",
   "directories": {
     "test": "test"
   }

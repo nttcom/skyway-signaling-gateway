@@ -1,0 +1,39 @@
+name: raspi205
+description: remote test camera at Palo Alto
+topics:
+  - name: raspi205/cpu
+    title: cpu usage
+    type: json
+    properties:
+      - name: 1min
+        type: number
+        description: average in 1 minutes
+      - name: 5min
+        type: number
+        description: average in 5 minutes
+      - name: 15min
+        type: number
+        description: average in 15 minutes
+  - name: raspi205/memory
+    title: memory usage
+    type: json
+    properties:
+      - name: free
+        type: number
+        description: free memory
+      - name: total
+        type: number
+        description: total memory
+      - name: used
+        type: number
+        description: used memory
+  - name: raspi205/temperature
+    title: device temperature
+    type: json
+    properties:
+      - name: cpu
+        type: number
+        description: cpu temperature
+uuid: 3f6f6873-8191-44d9-a229-bb652884dd61
+streaming:
+  enable: true

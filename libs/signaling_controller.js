@@ -1,14 +1,24 @@
 const md5 = require('md5')
 const EventEmitter = require("events").EventEmitter
+const Rx = require('rx')
+const fetch = require('node-fetch')
+const express = require('express')
+
+const app = express()
 
 const _ = require('underscore')
 const log4js = require('log4js')
 
+const ssgStore = require('./redux-libs/store')
+const Skyway = require('./Connector/Skyway')
+
 const streaming_process = require('./miscs/streaming_process')
 const sdp = require('./miscs/sdp')
 
-const CONF = require('../conf/skyway.json')
-const JANUS_CONF = require('../conf/janus.json')
+const yaml = require('node-yaml')
+
+const CONF = yaml.readSync('../conf/skyway.yaml')
+const JANUS_CONF = yaml.readSync('../conf/janus.yaml')
 
 const {
   RESPONSE_CREATE_ID,
@@ -33,7 +43,8 @@ const {
   pushTrickle,
   setBufferCandidates,
   setHandleId,
-  setPairOfPeerids
+  setPairOfPeerids,
+  removeConnection
 } = require('./redux-libs/actions')
 
 const util = require('./miscs/util')
@@ -46,19 +57,35 @@ class SignalingController extends EventEmitter {
    * initialize skyway and ssgStore, then setup handlers
    *
    */
-  constructor(ssgStore, Skyway) {
-    super(ssgStore, Skyway);
+  constructor() {
+    super();
 
-    this.my_peerid = process.env.PEERID || CONF['peerid'] || null
+    this.apikey = CONF['apikey'] || 'invalidkey'
+    this.options   = {
+      origin: CONF['origin'] || null,
+      secure: CONF['secure'] || true
+    };
 
     this.ssgStore = ssgStore // store for Janus
-    this.skyway = new Skyway({option:{peerid: this.my_peerid}}, ssgStore)
-
-    this.skyway.on("opened", ev => {
-      this.setSkywayHandler()
-      this.setJanusHandler()
-    })
   }
+
+  /**
+   * start connecting skyway server, then setHandler
+   *
+   */
+  start() {
+    util.loadAppYaml()
+      .then( app_conf => {
+        this.ports = app_conf.ports
+        this.skyway = new Skyway(this.apikey, this.options, this)
+        this.skyway.on("opened", peerid => {
+          this.setSkywayHandler()
+          this.setJanusHandler()
+          this.setupRESTServer()
+        })
+      })
+      .catch(err => logger.warn(err))
+ }
 
   /**
    * set skyway handlers
@@ -106,7 +133,6 @@ class SignalingController extends EventEmitter {
         shouldBuffer = true
         this.ssgStore.dispatch(setBufferCandidates(connection_id, shouldBuffer))
       }
-      //logger.debug(candidate)
 
       // When shouldBufferCandidates is true, we'll push candidate object into dedicated buffer.
       // When it is not, we'll send trickle request to Janus Gateway
@@ -178,10 +204,15 @@ class SignalingController extends EventEmitter {
           // lift restriction to buffer candidates
           this.ssgStore.dispatch(setBufferCandidates(connection_id, false))
 
-          // dispatch each buffered candidates
-          connection.buffCandidates.forEach( candidate =>
-            this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
-          )
+          // dispatch each buffered candidates, when it exists
+          if(connection.buffCandidates instanceof Array && connection.buffCandidates.length > 0) {
+            connection.buffCandidates.forEach( candidate =>
+              this.ssgStore.dispatch(requestTrickle(connection_id, candidate))
+            )
+          } else {
+            logger.info("no buffered candidates found");
+          }
+
           break;
         case LONGPOLLING_WEBRTCUP:
           // execute media streaming process when it is not work yet.
@@ -210,11 +241,11 @@ class SignalingController extends EventEmitter {
     // since, using streaming plugin does not initiate peer from browser,
     // so we will use connection object in SkyWay connector, explicitly
     let client_peer_id = src
-    let ssg_peer_id = this.my_peerid
+    let ssg_peer_id = this.skyway.myPeerid
 
     this.ssgStore.dispatch(setPairOfPeerids(connection_id, client_peer_id, ssg_peer_id));
 
-    this.ssgStore.dispatch(setHandleId(connection_id, handle_id));
+    this.ssgStore.dispatch(setHandleId(connection_id, handle_id.toString('hex')));
     this.ssgStore.dispatch(requestCreateId(connection_id, {
       offer: null,
       p2p_type: "media",
@@ -234,7 +265,7 @@ class SignalingController extends EventEmitter {
       logger.error( "skyway is not opened" )
       return;
     }
-    let connection_id = this.getConnectionId(handle_id)
+    let connection_id = this.getConnectionId(handle_id.toString('hex'))
 
     if(connection_id !== "") this.ssgStore.dispatch(requestStreamingStop(connection_id))
   }
@@ -256,7 +287,128 @@ class SignalingController extends EventEmitter {
     // when connection_id is not found, we'll return ""
     return ""
   }
+
+  /**
+   * get client peer id. it will be retrieved from ssg store
+   *
+   * @param {string} connection_id - connection id
+   * @private
+   */
+  getClientPeerid(connection_id){
+    let {connections} = this.ssgStore.getState().sessions
+
+    return connections[connection_id].peerids.client
+  }
+
+  /**
+   * get SSG peer id. it will be retrieved from ssg store
+   *
+   * @param {string} connection_id - connection id
+   * @private
+   */
+  getSSGPeerid(connection_id){
+    // fixme
+    let {connections} = this.ssgStore.getState().sessions
+
+    return connections[connection_id].peerids.ssg
+  }
+
+  /**
+   * set pair of peerids for ssg store
+   *
+   * @params {string} connection_id
+   * @params {string} src
+   * @params {string} dst
+   */
+  setPairOfPeerids(connection_id, src, dst) {
+    this.ssgStore.dispatch(setPairOfPeerids(connection_id, src, dst));
+  }
+
+  /**
+   * setup REST Server
+   *
+   */
+  setupRESTServer() {
+    app.get('/ssg_peerid', (req, res) => {
+      res.send(this.skyway.myPeerid)
+    })
+
+    // /stream/:handle_id?method=[start|stop]&src=${src_peerid}
+    app.get('/stream/:handle_id', (req, res) => {
+      const handle_id = req.params.handle_id
+      const method    = req.query.method
+      const src       = req.query.src
+
+      if( !handle_id.match(/^[0-9a-fA-F]{16}$/) || !((method==="start" && src.length > 4) || (method === "stop")) ){
+        let message = "invalid queries: " + JSON.stringify({handle_id, method, src})
+        logger.warn(message)
+        res.status(400).send(message)
+
+        return
+      }
+
+      switch(method) {
+      case 'start':
+        this.startStreaming(handle_id, src)
+        break;
+      case 'stop':
+        this.stopStreaming(handle_id)
+        break;
+      default:
+      }
+
+      res.send('ok')
+    })
+
+    app.get('/room/:name', (req, res) => {
+      const method = req.query.method
+      const name   = req.params.name
+
+      if(!method.match(/^(join|leave)$/) || !(name.length > 2)) {
+        let mesg = 'invalid queries: ' + JSON.stringify({method, name})
+        logger.warn(mesg)
+        res.status(400).send(mesg)
+        return
+      }
+
+      switch(method) {
+      case 'join':
+        this.skyway.sendRoomJoin(name)
+        break
+      case 'leave':
+        this.skyway.sendRoomLeave(name)
+        break
+      default:
+        break
+      }
+
+      res.send('ok')
+    })
+
+    app.delete('/connection/:peerid', (req, res) => {
+      const peerid = req.params.peerid
+
+      this.ssgStore.dispatch(removeConnection(peerid))
+      res.send('ok')
+    })
+
+    app.get('/connections', (req, res) => {
+      const {connections} = this.ssgStore.getState().sessions
+      res.json(connections)
+    })
+
+    app.get('/connection/:id', (req, res) => {
+      const id = req.params.id
+      const {connections} = this.ssgStore.getState().sessions
+
+      res.json(connections[id])
+    })
+
+    app.listen(this.ports.SIGNALING_CONTROLLER, () => {
+      logger.info(`start REST Server on port ${this.ports.SIGNALING_CONTROLLER}`)
+    })
+  }
 }
 
 
-module.exports = SignalingController
+module.exports = new SignalingController()

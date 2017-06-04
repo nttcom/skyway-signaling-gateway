@@ -2,10 +2,9 @@
 <html lang="ja">
   <head>
     <meta charset="utf-8">
-    <script src="/js/peer.0.3.min.js"></script>
-    <script src="/js/jquery-2.2.4.min.js"></script>
-    <script src="/js/webrtc-adapter.js"></script>
-
+    <script type='text/javascript' src='https://cdn.skyway.io/skyway.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/3.3.0/adapter.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
   </head>
   <body>
     <div>
@@ -14,7 +13,9 @@
         <div id="content">
           <h4>datachannel</h4>
           <p>
-            <button id="start-datachannel">start datachannel</button>
+            <form id="form-start">
+              <input type="text" id="dst-peer" placeholder="input peer id"><input type="submit" value="start">
+            </form>
             <strong>local</strong> : <span id="datachannel-sent"></span>
             <br />
             <strong>echo</strong> : <span id="datachannel-received"></span>
@@ -39,8 +40,8 @@
     </div>
 
     <script>
-    const DEST_PEER = "<%= peerid %>";
-
+    let dst_peer = localStorage.dst_peer;
+    $("#dst-peer").val(dst_peer)
     /**
      * start peer connection
      *
@@ -49,15 +50,16 @@
      */
     function start(iceServers) {
       var peer = new Peer({
-        key: "<%= apikey %>"
-        , "config": {"iceServers": iceServers}
+        key: "<%= apikey %>",
+        config: {"iceServers": iceServers},
+        debug: 3
       })
 
       peer.on("open", id => {
         $("#mypeerid").val(id);
 
         $("#start-sending-voice").on("click", e => startSendingVoice())
-        $("#start-datachannel").on("click", e => startDataChannel())
+        $("#form-start").on("submit", e => startDataChannel(e))
       })
 
       // this is for streaming plugin
@@ -84,15 +86,20 @@
       }
 
       startCall = (stream) => {
-        var call = peer.call(DEST_PEER, stream);
+        var call = peer.call(dst_peer, stream);
       }
 
       // start datachannel echo
-      startDataChannel = () => {
+      startDataChannel = (ev) => {
+        ev.preventDefault();
         // disable button
         $("#start-datachannel").attr("disabled", "disabled")
+        dst_peer = $("#dst-peer").val()
+        if(!!dst_peer === false) return;
+        localStorage.dst_peer = dst_peer;
+        console.log(dst_peer)
 
-        var conn = peer.connect(DEST_PEER, {serialization: "none", reliable: true})
+        var conn = peer.connect(dst_peer, {serialization: "none", reliable: true})
         conn.on('open', () => {
           conn.on('data', data => $("#datachannel-received").text(data) )
 

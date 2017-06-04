@@ -93,8 +93,8 @@ SKWPeer* peer;
 SKWPeerOption* option = [[SKWPeerOption alloc] init];
 option.key = kAPIkey;
 option.domain = kDomain;
-    
-peer	= [[SKWPeer alloc] initWithId:nil options:option];
+
+peer = [[SKWPeer alloc] initWithId:nil options:option];
 
 [peer on:SKW_PEER_EVENT_OPEN callback:^(NSObject* obj)
   {
@@ -108,7 +108,7 @@ peer	= [[SKWPeer alloc] initWithId:nil options:option];
 SKWConnectOption* option = [[SKWConnectOption alloc] init];
 option.serialization = SKW_SERIALIZATION_NONE;
 option.reliable = YES;
-    
+
 SKWDataConnection *dataConnection = [_peer connectWithId:strSSGPEERID options:option];
 
 [data on:SKW_DATACONNECTION_EVENT_OPEN callback:^(NSObject* obj)
@@ -123,9 +123,9 @@ SKWDataConnection *dataConnection = [_peer connectWithId:strSSGPEERID options:op
 SKWMediaConstraints* constraints = [[SKWMediaConstraints alloc] init];
 constraints.videoFlag = NO;
 constraints.audioFlag = YES;
-    
+
 SKWMediaStream* msLocal = [SKWNavigator getUserMedia:constraints];
-    
+
 SKWMediaConnection* mediaAudioConnection = [_peer callWithId:remoteId stream:_msLocal];
 ```
 
@@ -146,7 +146,7 @@ peer.on('call', stream => { $("#video").attr("src", window.URL.createObjectURL(s
 // request call
 NSMutableString *message = [NSMutableString stringWithString: @"SSG:stream/start,"];
 [message appendString: mypeerid];
-         
+
 [dataConnection send:message];
 ...
 
@@ -171,7 +171,7 @@ Peer peer = new Peer(context, options);
 
 peer.on(Peer.PeerEventEnum.OPEN, new OnCallback() {
   @Override
-	public void onCallback(Object object) {
+ public void onCallback(Object object) {
     String mypeerid = (String) object;
   }
 });
@@ -186,8 +186,8 @@ option.serialization = DataConnection.SerializationEnum.NONE;
 DataConnection dataconn = peer.connect(strSSGPEERID, option);
 
 dataconn.on(DataConnection.DataEventEnum.OPEN, new OnCallback() {
-	@Override
-	public void onCallback(Object object) {
+ @Override
+ public void onCallback(Object object) {
     dataconn.send("hello");
   }
 });
@@ -212,9 +212,9 @@ MediaConnection mediaconnAudio = peer.call(strSSGPEERID, msLocal);
 
 // set handler for Janus side media stream.
 media.on(MediaConnection.MediaEventEnum.STREAM, new OnCallback() {
-	@Override
-	public void onCallback(Object object)	{
-		MediaStream msRemote = (MediaStream) object;
+ @Override
+ public void onCallback(Object object) {
+  MediaStream msRemote = (MediaStream) object;
   }
 }
 
@@ -244,21 +244,21 @@ $ PEERID=ssgid node app.js
 
 way of setting env will overwrite setting of skyway.json
 
-# disable automatic execution of streaming process
+# enable automatic execution of streaming process (alpha feature)
 
-By default, streaming process configured in janus.json (streaming_process property) will be automatically executed.
+You can automatically execute streaming process. To enable this feature, set ENABLE_AUTO_STREAMING=true while starting process as shown below.
+
+```bash
+$ ENABLE_AUTO_STREAMING=true node app.js
+```
+
+Also, you need to set the path of streaming process in janus.json.
 
 ```janus.json
 {
  ...
  "streaming_process": "/bin/bash /home/ubuntu/signalinggateway/skywayiot-sdk-test/media_streaming_transfer_test.sh"
 }
-```
-
-If you want to disable this feature, set DISABLE_AUTO_STREAMING=true while starting process.
-
-```bash
-$ DISABLE_AUTO_STREAMING=true node app.js
 ```
 
 # force OPUS

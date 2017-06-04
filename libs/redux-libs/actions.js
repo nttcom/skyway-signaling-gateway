@@ -1,14 +1,18 @@
 /**
  * actions.js
  */
-const CONF = require('../../conf/janus.json')
 
 
 const fetch = require('isomorphic-fetch')
 const util  = require('../miscs/util')
 const _     = require('underscore')
+const log4js = require('log4js')
+const logger = log4js.getLogger('redux-action')
+const yaml = require('node-yaml')
 
+const CONF = yaml.readSync('../../conf/janus.yaml')
 const ENDPOINT = CONF['rest_scheme'] + "://" + CONF['endpoint_addr'] + ":" + CONF['rest_port']
+
 
 // constants for actions
 const REQUEST_JANUS = 'REQUEST_POST'
@@ -22,8 +26,11 @@ const SET_PLUGIN = 'SET_PLUGIN'
 const SET_BUFFER_CANDIDATES = 'SET_BUFFER_CANDIDATES'
 const SET_HANDLE_ID = 'SET_HANDLE_ID'
 const SET_PAIR_OF_PEERIDS = 'SET_PAIR_OF_PEERIDS'
+const REMOVE_CONNECTION = 'REMOVE_CONNECTION'
 
 const PUSH_TRICKLE = 'PUSH_TRICKLE'
+
+
 
 // constants for status
 const REQUEST_CREATE_ID = 'REQUEST_CREATE_ID'
@@ -226,7 +233,18 @@ function receiveJanus(connection_id, janus_type, transaction, jsonBody) {
   }
 }
 
-
+/**
+ * This will be called when Signaling Controller receive DELETE connection request
+ * from Plugin Connector
+ *
+ * @param {string} src - src peerid
+ */
+function removeConnection(src) {
+  return {
+    type: REMOVE_CONNECTION,
+    src
+  }
+}
 
 
 
@@ -688,6 +706,7 @@ module.exports = {
   SET_BUFFER_CANDIDATES,
   SET_PAIR_OF_PEERIDS,
   PUSH_TRICKLE,
+  REMOVE_CONNECTION,
   requestMediatype,
   requestAttach,
   requestCreateId,
@@ -706,5 +725,6 @@ module.exports = {
   setPairOfPeerids,
   setPlugin,
   requestJanus,
-  receiveJanus
+  receiveJanus,
+  removeConnection
 }

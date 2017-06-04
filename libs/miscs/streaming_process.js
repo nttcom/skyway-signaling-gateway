@@ -6,8 +6,9 @@ const _ = require('underscore')
 const log4js = require('log4js')
 const logger = log4js.getLogger('streaming_process')
 
+const yaml = require('node-yaml')
+const JANUS_CONF = yaml.readSync('../../conf/janus.yaml');
 
-const JANUS_CONF = require('../../conf/janus.json');
 const STREAMING_PROCESS = JANUS_CONF['streaming_process']
 
 class StreamingProcess {
@@ -19,7 +20,7 @@ class StreamingProcess {
     this.streaming_process = STREAMING_PROCESS.split(" ")[0]
     this.args = STREAMING_PROCESS.split(" ").slice(1)
     this.childProcess = null
-    this.disable = process.env.DISABLE_AUTO_STREAMING === 'true'
+    this.disable = process.env.ENABLE_AUTO_STREAMING !== 'true'
 
     logger.setLevel(loglevel)
 
