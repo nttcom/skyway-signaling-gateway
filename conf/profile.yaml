@@ -1,4 +1,4 @@
-name: your-device
+name: yourdevice
 description: Your device powered by SkyWay IoT SDK
 topics:
   - name: yourdevice/cpu
@@ -36,3 +36,4 @@ topics:
         description: cpu temperature
 streaming:
   enable: true
+uuid: a5006d9b-4638-497f-b48a-5fe2a85039b3
