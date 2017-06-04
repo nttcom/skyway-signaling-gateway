@@ -141,4 +141,4 @@ $ npm run test:watch
 ```
 
 ---
-license MIT
+license Apache-2.0
