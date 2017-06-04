@@ -1,7 +1,7 @@
-name: raspi205
-description: remote test camera at Palo Alto
+name: your-device
+description: Your device powered by SkyWay IoT SDK
 topics:
-  - name: raspi205/cpu
+  - name: yourdevice/cpu
     title: cpu usage
     type: json
     properties:
@@ -14,7 +14,7 @@ topics:
       - name: 15min
         type: number
         description: average in 15 minutes
-  - name: raspi205/memory
+  - name: yourdevice/memory
     title: memory usage
     type: json
     properties:
@@ -27,13 +27,12 @@ topics:
       - name: used
         type: number
         description: used memory
-  - name: raspi205/temperature
+  - name: yourdevice/temperature
     title: device temperature
     type: json
     properties:
       - name: cpu
         type: number
         description: cpu temperature
-uuid: 3f6f6873-8191-44d9-a229-bb652884dd61
 streaming:
   enable: true
