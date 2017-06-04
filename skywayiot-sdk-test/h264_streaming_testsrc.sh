@@ -34,8 +34,6 @@ gst-launch-1.0 videotestsrc ! \
   h264parse ! rtph264pay config-interval=1 pt=96 ! \
     udpsink host=127.0.0.1 port=5004 \
 audiotestsrc ! \
-  audioconvert ! \
-  queue ! audioresample ! \
   audioconvert ! queue ! \
   audio/x-raw,channels=1,rate=16000 ! \
   opusenc bitrate=20000 ! \
