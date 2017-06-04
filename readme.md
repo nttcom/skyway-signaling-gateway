@@ -15,12 +15,10 @@ Signaling Gateway Server for Skyway and Janus Gateway
 ## how to setup
 
 ```bash
-$ cp conf/janus.json.tmpl conf/janus.json
-$ cp conf/skyway.json.tmpl conf/skyway.json
+$ cp conf/skyway.json.tmpl conf/skyway.yaml
 ```
 
-You need to change skyway.json. At least, you have to replace api key setting, in case you set __http://example.com__ as a origin of it.
-In many cases, you don't need to change janus.json
+You need to change skwyay.yaml. At least, you have to replace your api key setting.
 
 # run SSG
 
