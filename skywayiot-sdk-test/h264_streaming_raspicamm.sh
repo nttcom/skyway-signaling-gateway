@@ -49,7 +49,6 @@ gst-launch-1.0 rpicamsrc ! \
 alsasrc device=hw:1 ! \
   volume volume=10 ! audioconvert ! \
   queue ! audioresample ! \
-  audioconvert ! queue ! \
   audio/x-raw,channels=1,rate=16000 ! \
   opusenc bitrate=20000 ! \
     rtpopuspay ! udpsink host=127.0.0.1 port=5002
