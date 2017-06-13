@@ -1,3 +1,3 @@
 secure: true # when it's true, use https for connecting skyway server
-apikey: 7b5cadc4-5364-4677-9e6f-8055555592fd # you can get apikey from https://skyway.io/ds/
+apikey: YOUR_API_KEY # you can get apikey from https://skyway.io/ds/
 origin: http://localhost # please set domain which is match with above apikey setting

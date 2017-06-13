@@ -1,6 +1,8 @@
 #!/bin/sh
 
-# this script is for streaming out the h264 media from test source
+# this script is for streaming out the h264 media from usbcam
+# please be sure that to set 'Enable Camera' on raspi-config
+# before running this gstreamer1.0 script
 
 # sample configuration on janus.plugin.streaming.sample
 # ... please don't forget to comment out of [gstreamer-sample] conf with semi-collon
@@ -23,18 +25,30 @@
 # when ENABLE_AUTO_STREAMING=true, it should be uncommented
 # trap 'pkill raspivid; pkill gst-launch-1.0' EXIT
 
+# execute gstreamer with raspicam
+# below needs
+#  apt-get update
+#  apt-get install gstreamer1.0 gstreamer1.0-tools
+#  git clone https://github.com/thaytan/gst-rpicamsrc.git
+#  cd gst-rpicamsrc
+#  ./autogen.sh --prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf/
+#  make
+#  sudo make install
+
+# for gst-rpicamsrc, see more detail at https://github.com/thaytan/gst-rpicamsrc
+
 # videotestsrc | rpicamsrc
 # audiotestsrc ! \
 
 # start streaming
-gst-launch-1.0 videotestsrc ! \
+gst-launch-1.0 v4l2src device=/dev/video0 ! \
   video/x-raw,width=640,height=480,framerate=30/1 ! \
   videoscale ! videorate ! videoconvert ! timeoverlay ! \
   omxh264enc target-bitrate=2000000 control-rate=variable ! \
   h264parse ! rtph264pay config-interval=1 pt=96 ! \
     udpsink host=127.0.0.1 port=5004 \
-audiotestsrc ! \
-  audioconvert ! queue ! \
+audiotestsrc ! audioconvert! \
+  queue ! audioresample ! \
   audio/x-raw,channels=1,rate=16000 ! \
   opusenc bitrate=20000 ! \
     rtpopuspay ! udpsink host=127.0.0.1 port=5002
