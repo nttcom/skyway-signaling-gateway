@@ -7,13 +7,6 @@ const logger = log4js.getLogger("DatachannelController")
 const util = require('./miscs/util')
 
 
-// PluginConnector
-//   handle data channel message via SkyWay IoT Plugin (interface is UDP)
-let pluginConn = new PluginConnector()
-// ExtInterface
-//   TCP server for providing 3rd party application bindings (data channel message is relayed)
-let extInterface = new ExtInterface()
-
 
 
 class DatachannelController extends EventEmitter {
@@ -23,6 +16,12 @@ class DatachannelController extends EventEmitter {
   constructor(){
     super();
 
+    // PluginConnector
+    //   handle data channel message via SkyWay IoT Plugin (interface is UDP)
+    this.pluginConn = new PluginConnector()
+    // ExtInterface
+    //   TCP server for providing 3rd party application bindings (data channel message is relayed)
+    this.extInterface = new ExtInterface()
   }
 
   /**
@@ -30,7 +29,14 @@ class DatachannelController extends EventEmitter {
    *
    */
   start() {
-    this.setHandler();
+    return new Promise((resolv, reject) => {
+      this.pluginConn.start()
+        .then(() => this.extInterface.start())
+        .then(() => {
+          this.setHandler()
+          resolv()
+        }).catch(err => reject(err))
+    })
   }
 
   /**
@@ -57,11 +63,11 @@ class DatachannelController extends EventEmitter {
    *
    */
   _setPluginHandler() {
-    const source = Rx.Observable.fromEvent(pluginConn, 'message')
+    const source = Rx.Observable.fromEvent(this.pluginConn, 'message')
 
     const subscribeData = source
       .filter(msg => msg.handle_id instanceof Buffer && msg.handle_id.length === 8 && msg.payload)
-      .subscribe( msg => { extInterface.send(msg.handle_id, msg.payload) } )
+      .subscribe( msg => { this.extInterface.send(msg.handle_id, msg.payload) } )
   }
 
   /**
@@ -75,12 +81,12 @@ class DatachannelController extends EventEmitter {
    * @private
    */
   _setExtHandler(){
-    const source = Rx.Observable.fromEvent(extInterface, 'message')
+    const source = Rx.Observable.fromEvent(this.extInterface, 'message')
       .filter(msg => typeof(msg) === 'object')
 
     const subscribeDataSource = source
       .filter(msg => msg.handle_id instanceof Buffer && msg.handle_id.length === 8 && msg.payload)
-      .subscribe(msg => { pluginConn.send(msg.handle_id, msg.payload) });
+      .subscribe(msg => { this.pluginConn.send(msg.handle_id, msg.payload) });
   }
 }
 

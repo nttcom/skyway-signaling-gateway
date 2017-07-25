@@ -74,18 +74,21 @@ class SignalingController extends EventEmitter {
    *
    */
   start() {
-    util.loadAppYaml()
-      .then( app_conf => {
-        this.ports = app_conf.ports
-        this.skyway = new Skyway(this.apikey, this.options, this)
-        this.skyway.on("opened", peerid => {
+    return new Promise((resolv, reject) => {
+      util.loadAppYaml()
+        .then( app_conf => {
+          this.ports = app_conf.ports
+          this.skyway = new Skyway(this.apikey, this.options, this)
+          return this.skyway.connect()
+        }).then( () => {
           this.setSkywayHandler()
           this.setJanusHandler()
-          this.setupRESTServer()
+          return this.setupRESTServer()
         })
-      })
-      .catch(err => logger.warn(err))
- }
+        .then(() => resolv())
+        .catch(err => reject(err))
+    })
+  }
 
   /**
    * set skyway handlers
@@ -327,85 +330,90 @@ class SignalingController extends EventEmitter {
   /**
    * setup REST Server
    *
+   * Promise
+   *
    */
   setupRESTServer() {
-    app.get('/ssg_peerid', (req, res) => {
-      res.send(this.skyway.myPeerid)
-    })
+    return new Promise((resolv, reject) => {
+      app.get('/ssg_peerid', (req, res) => {
+        res.send(this.skyway.myPeerid)
+      })
 
-    // /stream/:handle_id?method=[start|stop]&src=${src_peerid}
-    app.get('/stream/:handle_id', (req, res) => {
-      const handle_id = req.params.handle_id
-      const method    = req.query.method
-      const src       = req.query.src
+      // /stream/:handle_id?method=[start|stop]&src=${src_peerid}
+      app.get('/stream/:handle_id', (req, res) => {
+        const handle_id = req.params.handle_id
+        const method    = req.query.method
+        const src       = req.query.src
 
-      if( !handle_id.match(/^[0-9a-fA-F]{16}$/) || !((method==="start" && src.length > 4) || (method === "stop")) ){
-        let message = "invalid queries: " + JSON.stringify({handle_id, method, src})
-        logger.warn(message)
-        res.status(400).send(message)
+        if( !handle_id.match(/^[0-9a-fA-F]{16}$/) || !((method==="start" && src.length > 4) || (method === "stop")) ){
+          let message = "invalid queries: " + JSON.stringify({handle_id, method, src})
+          logger.warn(message)
+          res.status(400).send(message)
 
-        return
-      }
+          return
+        }
 
-      switch(method) {
-      case 'start':
-        this.startStreaming(handle_id, src)
-        break;
-      case 'stop':
-        this.stopStreaming(handle_id)
-        break;
-      default:
-      }
+        switch(method) {
+        case 'start':
+          this.startStreaming(handle_id, src)
+          break;
+        case 'stop':
+          this.stopStreaming(handle_id)
+          break;
+        default:
+        }
 
-      res.send('ok')
-    })
+        res.send('ok')
+      })
 
-    app.get('/room/:name', (req, res) => {
-      const method = req.query.method
-      const name   = req.params.name
+      app.get('/room/:name', (req, res) => {
+        const method = req.query.method
+        const name   = req.params.name
 
-      if(!method.match(/^(join|leave)$/) || !(name.length > 2)) {
-        let mesg = 'invalid queries: ' + JSON.stringify({method, name})
-        logger.warn(mesg)
-        res.status(400).send(mesg)
-        return
-      }
+        if(!method.match(/^(join|leave)$/) || !(name.length > 2)) {
+          let mesg = 'invalid queries: ' + JSON.stringify({method, name})
+          logger.warn(mesg)
+          res.status(400).send(mesg)
+          return
+        }
 
-      switch(method) {
-      case 'join':
-        this.skyway.sendRoomJoin(name)
-        break
-      case 'leave':
-        this.skyway.sendRoomLeave(name)
-        break
-      default:
-        break
-      }
+        switch(method) {
+        case 'join':
+          this.skyway.sendRoomJoin(name)
+          break
+        case 'leave':
+          this.skyway.sendRoomLeave(name)
+          break
+        default:
+          break
+        }
 
-      res.send('ok')
-    })
+        res.send('ok')
+      })
 
-    app.delete('/connection/:peerid', (req, res) => {
-      const peerid = req.params.peerid
+      app.delete('/connection/:peerid', (req, res) => {
+        const peerid = req.params.peerid
 
-      this.ssgStore.dispatch(removeConnection(peerid))
-      res.send('ok')
-    })
+        this.ssgStore.dispatch(removeConnection(peerid))
+        res.send('ok')
+      })
 
-    app.get('/connections', (req, res) => {
-      const {connections} = this.ssgStore.getState().sessions
-      res.json(connections)
-    })
+      app.get('/connections', (req, res) => {
+        const {connections} = this.ssgStore.getState().sessions
+        res.json(connections)
+      })
 
-    app.get('/connection/:id', (req, res) => {
-      const id = req.params.id
-      const {connections} = this.ssgStore.getState().sessions
+      app.get('/connection/:id', (req, res) => {
+        const id = req.params.id
+        const {connections} = this.ssgStore.getState().sessions
 
-      res.json(connections[id])
-    })
+        res.json(connections[id])
+      })
 
-    app.listen(this.ports.SIGNALING_CONTROLLER, () => {
-      logger.info(`start REST Server on port ${this.ports.SIGNALING_CONTROLLER}`)
+      app.listen(this.ports.SIGNALING_CONTROLLER, () => {
+        logger.info(`start REST Server on port ${this.ports.SIGNALING_CONTROLLER}`)
+        resolv()
+      }).on('error', err => reject(err))
     })
   }
 }

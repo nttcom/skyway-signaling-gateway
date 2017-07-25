@@ -35,15 +35,11 @@ class PluginConnector extends EventEmitter {
     this.sender_port = CONF['data_sender']['port']
     this.timestamps = {} // {${peerid}: timestamp}
 
-    logger.debug(`sender ${this.sender_dest}:${this.sender_port}, receiver port ${this.receiver_port}`)
+    // logger.debug(`sender ${this.sender_dest}:${this.sender_port}, receiver port ${this.receiver_port}`)
 
     this.sender = dgram.createSocket('udp4')
     this.receiver = dgram.createSocket('udp4')
 
-    util.loadAppYaml().then(app_conf => {
-      this.ports = app_conf.ports
-      this.start();
-    })
   }
 
   /**
@@ -51,10 +47,17 @@ class PluginConnector extends EventEmitter {
    *
    */
   start() {
-    this.startRESTServer()
-    this.receiver.bind({address: "0.0.0.0", port: this.receiver_port}, () => {
-      logger.info(`succeeded to bind port ${this.receiver_port}`);
-      this.setRecieveHandler();
+    return new Promise((resolv, reject) => {
+      util.loadAppYaml().then(app_conf => {
+        this.ports = app_conf.ports
+        return this.startRESTServer()
+      }).then(() => {
+        this.receiver.bind({address: "0.0.0.0", port: this.receiver_port}, () => {
+          logger.info(`succeeded to bind port ${this.receiver_port}`);
+          this.setRecieveHandler();
+          resolv()
+        }).on('error', err => reject(err))
+      }).catch(err => reject(err))
     })
   }
 
@@ -187,12 +190,15 @@ class PluginConnector extends EventEmitter {
    *
    */
   startRESTServer() {
-    app.get('/timestamps', (req, res) => {
-      res.json(this.timestamps)
-    })
+    return new Promise((resolv, reject) => {
+      app.get('/timestamps', (req, res) => {
+        res.json(this.timestamps)
+      })
 
-    app.listen(this.ports.PLUGIN_CONNECTOR, () => {
-      logger.info("start REST server on port : ", this.ports.PLUGIN_CONNECTOR)
+      app.listen(this.ports.PLUGIN_CONNECTOR, () => {
+        logger.info("start REST server on port : ", this.ports.PLUGIN_CONNECTOR)
+        resolv()
+      }).on('error', err => reject(err))
     })
   }
 }

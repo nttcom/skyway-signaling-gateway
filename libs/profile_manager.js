@@ -31,13 +31,16 @@ class ProfileManager extends EventEmitter {
    *
    */
   start(){
-    this.loadConf()
-      .then( () => util.loadAppYaml() )
-      .then( (app_conf) => {
-        this.ports = app_conf.ports
-        this.setupRESTServer()
-      })
-      .catch( err => logger.warn(err) )
+    return new Promise((resolv, reject) => {
+      this.loadConf()
+        .then( () => util.loadAppYaml() )
+        .then( (app_conf) => {
+          this.ports = app_conf.ports
+          return this.setupRESTServer()
+        })
+        .then(() => resolv())
+        .catch( err => reject(err) )
+    })
   }
 
   /**
@@ -53,13 +56,11 @@ class ProfileManager extends EventEmitter {
         } else {
           if(data.hasOwnProperty('uuid')) {
             this.profile = Object.assign({}, this.profile, data)
-            logger.info(JSON.stringify(this.profile))
             resolve()
           } else {
             data.uuid = uuid()
             yaml.write(CONFFILE, data, () => {
               this.profile = Object.assign({}, this.profile, data)
-              logger.info(JSON.stringify(this.profile))
               resolve()
             })
           }
@@ -73,23 +74,26 @@ class ProfileManager extends EventEmitter {
    *
    */
   setupRESTServer() {
-    app.get('/profile', (req, res) => {
-      const handle_id = req.query.handle_id
+    return new Promise((resolv, reject) => {
+      app.get('/profile', (req, res) => {
+        const handle_id = req.query.handle_id
 
-      fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/ssg_peerid`)
-        .then( res => res.text())
-        .then( ssg_peerid => {
-          const ret = Object.assign({}, this.profile, {ssg_peerid, handle_id})
-          res.send(ret)
-        })
-        .catch(err => {
-          logger.warn(err.toString())
-          res.status(500).send(err.toString())
-        })
-    })
+        fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/ssg_peerid`)
+          .then( res => res.text())
+          .then( ssg_peerid => {
+            const ret = Object.assign({}, this.profile, {ssg_peerid, handle_id})
+            res.send(ret)
+          })
+          .catch(err => {
+            logger.warn(err.toString())
+            res.status(500).send(err.toString())
+          })
+      })
 
-    app.listen(this.ports.PROFILE_MANAGER, () => {
-      logger.info('start REST Server on port %d', this.ports.PROFILE_MANAGER)
+      app.listen(this.ports.PROFILE_MANAGER, () => {
+        logger.info('start REST Server on port %d', this.ports.PROFILE_MANAGER)
+        resolv()
+      }).on('error', err => reject(err))
     })
   }
 }
