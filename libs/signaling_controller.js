@@ -60,13 +60,16 @@ class SignalingController extends EventEmitter {
   constructor() {
     super();
 
-    this.apikey = CONF['apikey'] || 'invalidkey'
+    const env = process.env
+
+    // allocate configuration params from environment, configuration file, then default value
+    this.apikey = env.SSG_APIKEY || CONF['apikey'] || 'invalidkey'
     this.options   = {
-      origin: CONF['origin'] || null,
-      secure: CONF['secure'] || true
+      origin: env.SSG_ORIGIN || CONF['origin'] || null,
+      secure: env.SSG_SECURE || CONF['secure'] || true
     };
 
-    this.ssgStore = ssgStore // store for Janus
+    this.ssgStore = ssgStore // redux store for Janus
   }
 
   /**

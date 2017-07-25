@@ -17,6 +17,6 @@ SignalingController.start()
   .then(() => webserver.start())
   .then(() => logger.info('SSG get started'))
   .catch(err => {
-    logger.warn(err)
+    logger.fatal(err)
     process.exit(1)
   })

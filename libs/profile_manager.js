@@ -54,6 +54,11 @@ class ProfileManager extends EventEmitter {
           logger.warn(err)
           reject()
         } else {
+          // if uuid is argued by environment param, we will use it (for development purpose)
+          if(process.env.SSG_UUID) data = Object.assign({}, data, {uuid: process.env.SSG_UUID})
+
+          // when 1st usage of this app, that means uuid is null, we will allocate new uuid
+          // then write it to the configuration file
           if(data.hasOwnProperty('uuid')) {
             this.profile = Object.assign({}, this.profile, data)
             resolve()

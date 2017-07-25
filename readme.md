@@ -1,38 +1,19 @@
 # SSG - Skyway Signaling Gateway
 
-Signaling Gateway Server for Skyway and Janus Gateway
+Signaling Gateway for Skyway and Janus Gateway
 
-## required software
+## How to install and setup
 
-* Install Janus Gateway
-  - [janus-skywayiot-pulugin](https://github.com/eastandwest/janus-skywayiot-plugin) MUST be applied to it.
-  - https MUST be enabled
-  - for more detail, see https://github.com/eastandwest/signalinggateway-vagrant/blob/master/provisioning/roles/janus/tasks/main.yml
-* setup SkyWay account
-  - You don't have it? You can have it at https://skyway.io/ds/.
-  - Then create API key and set origin setting
+see SkyWay IoT SDK [install manual](https://github.com/nttcom/skyway-iot-sdk/blob/master/docs/how_to_install.md)
 
-## how to setup
+# Supported features
 
-```bash
-$ cp conf/skyway.json.tmpl conf/skyway.yaml
-```
-
-You need to change skwyay.yaml. At least, you have to replace your api key setting.
-
-# run SSG
-
-```bash
-$ node app
-```
-
-# how to talk to Janus Gateway leveraging SkyWay SDK
-
-We support three feature between client and Janus Gateway.
+We support three features shown below.
 
 1. bidirectional data channel communication
   - 3rd party interface for this is TCP (by default 15000)
 2. one-way media stream from Janus Gateway
+  - leveraging streaming plugin of Janus Gateway
 3. one-way voice stream to Janus Gateway
   - 3rd party interface for this is UDP (by default 25000)
 
@@ -61,10 +42,10 @@ conn.on('open', () => { conn.send('hello'); });
 
 ```javascript
 navigator.mediaDevices.getUserMedia({audio: true, video: false})
-  .then(stream => { peer.call(PEERID_OF_SSG, stream) });
+  .then( stream => { peer.call(PEERID_OF_SSG, stream) } );
 ```
 
-## get downstream of media from Janus Gateway
+## get media downstream from Janus Gateway
 
 ```javascript
 // we assume datachannel already establlished.
@@ -80,23 +61,20 @@ conn.send(`SSG:stream/start,${mypeerid}`)
 conn.send('SSG:stream/stop');
 ```
 
-For more detail, check [example app](https://github.com/eastandwest/signalinggateway/blob/master/views/examples/index.ejs) and [provisioning script of SSG](https://github.com/eastandwest/signalinggateway-vagrant).
-
-
-# how to set SSG's peerid
+## how to set SSG's peerid
 
 You have two way.
 
-* set it in conf/skyway.json
-* set PEERID env while running process
+* set it in conf/skyway.yaml
+* set PEERID environment while running process
 
 ```bash
 $ PEERID=ssgid node app.js
 ```
 
-way of setting env will overwrite setting of skyway.json
+setting envronment will overwrite it in skyway.yaml
 
-# enable automatic execution of streaming process (alpha feature)
+## enable automatic execution of streaming process (alpha feature)
 
 You can automatically execute streaming process. To enable this feature, set ENABLE_AUTO_STREAMING=true while starting process as shown below.
 
@@ -104,16 +82,13 @@ You can automatically execute streaming process. To enable this feature, set ENA
 $ ENABLE_AUTO_STREAMING=true node app.js
 ```
 
-Also, you need to set the path of streaming process in janus.json.
+Also, you need to set the path of streaming process in janus.yaml.
 
-```janus.json
-{
- ...
- "streaming_process": "/bin/bash /home/ubuntu/signalinggateway/skywayiot-sdk-test/media_streaming_transfer_test.sh"
-}
+```janus.yaml
+streaming_process: "/bin/bash ~/signalinggateway/skywayiot-sdk-test/media_streaming_transfer_test.sh"
 ```
 
-# force OPUS
+## force OPUS
 
 By setting FORCE_OPUS=true while starting process, you can force audio codec to opus from client to Janus Gateway.
 
@@ -121,9 +96,13 @@ By setting FORCE_OPUS=true while starting process, you can force audio codec to 
 $ FORCE_OPUS=true node app
 ```
 
-# how to setup TURN
+## setup apikey, origin, secure and uuid parameters from environment for development purpose
 
-Since Janus gateway supports [draft spec of turn-rest-api](https://tools.ietf.org/html/draft-uberti-rtcweb-turn-rest-00), you need to setup turn-rest-api server [WIP] and turn server (for instance [coturn](https://github.com/coturn/coturn)). For more detail, [WIP]
+use SSG_APIKEY, SSG_ORIGIN, SSG_SECURE and SSG_UUID for each
+
+```bash
+SSG_APIKEY=XXXXXXXX-XXXX-XXXX-XXXXXXXXXXXX SSG_ORIGIN=http://localhost SSG_UUID="test-uuid" node app.js
+```
 
 
 # Testing

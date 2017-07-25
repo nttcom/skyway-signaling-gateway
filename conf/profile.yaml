@@ -36,4 +36,3 @@ topics:
         description: cpu temperature
 streaming:
   enable: true
-uuid: a5006d9b-4638-497f-b48a-5fe2a85039b3
