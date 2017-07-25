@@ -33,14 +33,6 @@ class ExtInterface extends EventEmitter {
 
     // collection for socket from 3rd party app
     this.clients = [];
-
-    // start server process
-    util.loadAppYaml()
-      .then( app_conf => {
-        this.ports = app_conf.ports
-        this.start()
-      })
-      .catch(err => logger.warn(err.toString()))
   }
 
   /**
@@ -48,19 +40,28 @@ class ExtInterface extends EventEmitter {
    *
    */
   start() {
-    net.createServer( socket => {
-      logger.info("new 3rd party app connected")
-      this.clients.push(socket)
+    return new Promise((resolv, reject) => {
+      util.loadAppYaml()
+        .then( app_conf => {
+          this.ports = app_conf.ports
+          net.createServer( socket => {
+            logger.info("new 3rd party app connected")
+              this.clients.push(socket)
 
-      // remove socket object from clients when tcp terminated
-      socket.on('end', () => {
-        logger.info("socket for the 3rd party app closed. we'll remove this socket object")
-        this.clients.splice(this.clients.indexOf(socket), 1)
-        logger.info(this.clients.length)
-      })
+              // remove socket object from clients when tcp terminated
+              socket.on('end', () => {
+                logger.info("socket for the 3rd party app closed. we'll remove this socket object")
+                  this.clients.splice(this.clients.indexOf(socket), 1)
+                  logger.debug(this.clients.length)
+              })
 
-      this._setExtDataObserver(socket)
-    }).listen(port)
+            this._setExtDataObserver(socket)
+          }).listen(port, () => {
+            resolv()
+          }).on('error', err => reject(err))
+        })
+        .catch(err => reject(err))
+    })
   }
 
   /**
@@ -96,11 +97,12 @@ class ExtInterface extends EventEmitter {
     const source = Rx.Observable.fromEvent(socket, 'data')
       .filter(buff => buff.length > 8) // drop data when it does not have handle_id
       .map(buff => {  // transform buffer object to json
-        return {
+        const data = {
           handle_id: buff.slice(0, 8),
           payload: buff.slice(8),
           is_control: buff.slice(8, 12).toString() === 'SSG:'
         }
+        return data
       })
 
     const roomSource = source

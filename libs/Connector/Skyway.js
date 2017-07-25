@@ -35,7 +35,6 @@ class SkywayConnector extends EventEmitter {
     this.controller = controller;
 
     this._changeStatus("init")
-    this.connect();
   }
 
   /**
@@ -48,16 +47,23 @@ class SkywayConnector extends EventEmitter {
 
     this._changeStatus("opening")
 
-    // when connection established to SkyWay server,
-    // we'll set EventHandler for SkyWay message
-    this.socket.on(util.MESSAGE_TYPES.SERVER.OPEN.key, () => {
-      logger.info("connection established");
+    return new Promise((resolv, reject) => {
+      this.socket.start(this.myPeerid, this.token)
+        .then(() => {
+          // when connection established to SkyWay server,
+          // we'll set EventHandler for SkyWay message
+          this.socket.on(util.MESSAGE_TYPES.SERVER.OPEN.key, () => {
+            logger.info("connection established");
 
-      this._changeStatus("opened", this.myPeerid)
-      this._setSocketHandler();
-    });
+            this._changeStatus("opened", this.myPeerid)
+            this._setSocketHandler();
 
-    this.socket.start(this.myPeerid, this.token)
+            resolv()
+          });
+
+          this.socket.on(util.MESSAGE_TYPES.SERVER.ERROR.key, err => reject(err))
+        }).catch(err => reject(err))
+    })
   }
 
 

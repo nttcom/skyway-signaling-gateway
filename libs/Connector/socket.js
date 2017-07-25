@@ -36,10 +36,14 @@ class Socket extends EventEmitter {
     this._reconnectAttempts = 0;
 
     this.origin = options.origin;
+    this.serverInfo = null
 
     if (options.host && options.port) {
-      let httpProtocol = options.secure ? 'https://' : 'http://';
-      this.signalingServerUrl = `${httpProtocol}${options.host}:${options.port}`;
+      this.serverInfo = {
+        host: options.host,
+        port: options.port,
+        secure: options.secure
+      }
     } else {
       const dispatcherHost = options.dispatcherHost || util.DISPATCHER_HOST;
       const dispatcherPort = options.dispatcherPort || util.DISPATCHER_PORT;
@@ -74,41 +78,37 @@ class Socket extends EventEmitter {
 
     let transports = undefined;
 
-    return new Promise(resolve => {
-      if (this._dispatcherUrl) {
-        this._getSignalingServer().then(serverInfo => {
-          let httpProtocol = serverInfo.secure ? 'https://' : 'http://';
-          this.signalingServerUrl = `${httpProtocol}${serverInfo.host}:${serverInfo.port}`;
-          resolve();
+    return new Promise( (resolv, reject) => {
+      this._getSignalingServer().then(serverInfo => {
+        let httpProtocol = serverInfo.secure ? 'https://' : 'http://';
+        this.signalingServerUrl = `${httpProtocol}${serverInfo.host}:${serverInfo.port}`;
+
+        this._io = io(this.signalingServerUrl, {
+          'force new connection': true,
+          'query':                query,
+          'reconnectionAttempts': util.reconnectionAttempts,
+          'transports':           transports,
+          'extraHeaders':         {Origin: this.origin}
         });
-      } else {
-        resolve();
-      }
-    }).then(() => {
-      this._io = io(this.signalingServerUrl, {
-        'force new connection': true,
-        'query':                query,
-        'reconnectionAttempts': util.reconnectionAttempts,
-        'transports':           transports,
-        'extraHeaders':         {Origin: this.origin}
-      });
 
-      this._io.on('connect', () => {
-      });
+        this._io.on('connect', () => {
+        });
 
-      this._io.on('disconnect', () => {
-        this.emit(util.MESSAGE_TYPES.SERVER.CLOSE.key)
-      });
+        this._io.on('disconnect', () => {
+          this.emit(util.MESSAGE_TYPES.SERVER.CLOSE.key)
+        });
 
-      this._io.on('reconnect_failed', () => {
-        this._stopPings();
-        this._connectToNewServer();
-      });
+        this._io.on('reconnect_failed', () => {
+          this._stopPings();
+          this._connectToNewServer();
+        });
 
-      this._io.on('error', e => {
-        this.emit(util.MESSAGE_TYPES.SERVER.ERROR.key)
-      });
-      this._setupMessageHandlers()
+        this._io.on('error', e => {
+          this.emit(util.MESSAGE_TYPES.SERVER.ERROR.key, e.message)
+        });
+        this._setupMessageHandlers()
+        resolv()
+      })
     });
   }
 
@@ -141,22 +141,28 @@ class Socket extends EventEmitter {
    */
   _getSignalingServer() {
     return new Promise((resolve, reject) => {
-      const url = this._dispatcherUrl;
-      const options = {
-        timeout: this.DISPATCHER_TIMEOUT
-      };
-      fetch(url, options)
-        .then( res  => res.json())
-        .then( json => {
-          if( json && json.domain ) {
-            resolve({host: json.domain, port: 443, secure: true})
-          } else {
-            reject(new Error('dispatcher response does not contain domain'))
-          }
-        })
-        .catch( err => {
-          reject( err )
-        })
+      if (this.serverInfo) {
+        resolve(this.serverInfo)
+      } else {
+        const url = this._dispatcherUrl;
+        const options = {
+          timeout: this.DISPATCHER_TIMEOUT
+        };
+
+        fetch(url, options)
+          .then( res  => res.json())
+          .then( json => {
+            if( json && json.domain ) {
+              this.serverInfo = {host: json.domain, port: 443, secure: true}
+              resolve(this.serverInfo)
+            } else {
+              reject(new Error('dispatcher response does not contain domain'))
+            }
+          })
+          .catch( err => {
+            reject( err )
+          })
+      }
     });
   }
 

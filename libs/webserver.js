@@ -25,11 +25,6 @@ class WebServer {
    *
    */
   constructor(){
-    util.loadAppYaml()
-      .then(app_conf => {
-        this.ports = app_conf.ports
-        this.setRouting();
-      })
   }
 
   /**
@@ -80,10 +75,22 @@ class WebServer {
   /**
    * start web server
    *
-   * @param {integer} port - port number (default: 3000)
    */
-  start(port = 3000) {
-    httpServer.listen(port, () => logger.info(`HTTP server listening on port ${port}`))
+  start() {
+    return new Promise((resolv, reject) => {
+      util.loadAppYaml()
+        .then(app_conf => {
+          this.ports = app_conf.ports
+          this.setRouting();
+
+          const port = this.ports.DASHBOARD || 3000
+
+          httpServer.listen(port, () => {
+            logger.info(`HTTP server listening on port ${port}`)
+            resolv()
+          }).on('error', err => reject(err))
+        }).catch(err => reject(err))
+    })
   }
 }
 

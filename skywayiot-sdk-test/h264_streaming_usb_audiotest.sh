@@ -40,12 +40,14 @@
 # videotestsrc | rpicamsrc
 # audiotestsrc ! \
 
+# h264parse ! rtph264pay ...
+
 # start streaming
 gst-launch-1.0 v4l2src device=/dev/video0 ! \
   video/x-raw,width=640,height=480,framerate=30/1 ! \
   videoscale ! videorate ! videoconvert ! timeoverlay ! \
   omxh264enc target-bitrate=2000000 control-rate=variable ! \
-  h264parse ! rtph264pay config-interval=1 pt=96 ! \
+  rtph264pay config-interval=1 pt=96 ! \
     udpsink host=127.0.0.1 port=5004 \
 audiotestsrc ! audioconvert! \
   queue ! audioresample ! \
