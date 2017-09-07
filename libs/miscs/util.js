@@ -43,7 +43,7 @@ util.MESSAGE_TYPES = {
   SERVER: serverMessages
 };
 
-util.DISPATCHER_HOST = 'dispatcher.skyway.io';
+util.DISPATCHER_HOST = 'dispatcher.webrtc.ecl.ntt.com';
 util.DISPATCHER_PORT = 443;
 util.DISPATCHER_SECURE = true;
 util.DISPATCHER_TIMEOUT = 3000;
