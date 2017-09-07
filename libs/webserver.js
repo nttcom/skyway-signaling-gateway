@@ -34,17 +34,17 @@ class WebServer {
   setRouting() {
     // examples
     app.get('/examples', (req, res) => {
-      res.render('examples/index.ejs', skyway_conf);
+      res.render(__dirname + '/../views/examples/index.ejs', skyway_conf);
     });
 
     // room-test
     app.get('/examples/roomtest', (req, res) => {
-      res.render('examples/room-test.ejs', skyway_conf);
+      res.render(__dirname + '/../views/examples/room-test.ejs', skyway_conf);
     });
 
     // full size video
     app.get('/examples/fullsize', (req, res) => {
-      res.render('examples/fullsize.ejs', skyway_conf);
+      res.render(__dirname + '/../views/examples/fullsize.ejs', skyway_conf);
     });
 
     // connections
