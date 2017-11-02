@@ -11,6 +11,8 @@ const fetch  = require('node-fetch')
 const express = require('express')
 const app    = express()
 
+const mqttConnector = require('./Mqtt')
+
 const yaml   = require('node-yaml')
 const CONF   = yaml.readSync('../../conf/janus.yaml')
 
@@ -55,9 +57,15 @@ class PluginConnector extends EventEmitter {
         this.receiver.bind({address: "0.0.0.0", port: this.receiver_port}, () => {
           logger.info(`succeeded to bind port ${this.receiver_port}`);
           this.setRecieveHandler();
-          resolv()
+          return Promise.resolve()
         }).on('error', err => reject(err))
-      }).catch(err => reject(err))
+      }).then(() => mqttConnector.start())
+      .then(() => {
+        this._setMqttHandler()
+        resolv()
+      })
+      .catch(err => reject(err))
+
     })
   }
 
@@ -85,6 +93,8 @@ class PluginConnector extends EventEmitter {
           handle_id: obj.handle_id,
           payload: obj.payload
         }
+        const mqttObj = JSON.parse(data.payload.toString())
+        mqttConnector.publish( mqttObj )
         this.emit('message', data)
       })
 
@@ -183,6 +193,12 @@ class PluginConnector extends EventEmitter {
 
       this.sender.send([handle_id, payload], this.sender_port, this.sender_dest)
     }
+  }
+
+  _setMqttHandler() {
+    mqttConnector.on('message', ({topic, payload}) => {
+      this.send(util.BROADCAST_ID, {topic, payload})
+    })
   }
 
   /**
