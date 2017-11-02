@@ -13,7 +13,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED="0"
 // Start each micro-servers
 SignalingController.start()
   .then(() => ProfileManager.start())
-  .then(() => DatachannelController.start(SignalingController))
+  .then(() => DatachannelController.start())
   .then(() => webserver.start())
   .then(() => logger.info('SSG get started'))
   .catch(err => {

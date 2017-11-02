@@ -136,19 +136,8 @@ class ExtInterface extends EventEmitter {
             }
           }
         }
-        fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/room/${obj.roomName}?method=${obj.method}`)
-          .then(res => res.text())
-          .then(mesg => {
-            const data = {
-              "type": "response",
-              "target": obj.target,
-              "method": obj.method,
-              "statuss": 200
-            }
-            this.send(util.CONTROL_ID, data)
-          })
-          .catch(logger.warn)
-      });
+        this.sendRoomRequest(obj.roomName, obj.method)
+     });
 
     const dataSource = source
       .filter(obj => !obj.is_control)
@@ -162,6 +151,40 @@ class ExtInterface extends EventEmitter {
         this.emit('message', data)
       })
   }
+
+  /**
+   * send room request (join or leave)
+   *
+   * @params {string} room_name - name of room
+   * @params {string} method    - method name (join or leave)
+   * @returns {Promise<Object>}
+   *
+   * @example
+   *
+   * this.sendRoomRequest('testroom', 'join')
+   *  #=> join 'testroom'
+   *
+   * this.sendRoomRequest('testroom', 'leave')
+   *  #=> leave from 'testroom'
+   */
+  sendRoomRequest(room_name, method) {
+    return new Promise((resolv, reject) => {
+      fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/room/${room_name}?method=${method}`)
+        .then(res => res.text())
+        .then(mesg => {
+          const data = {
+            "type": "response",
+            "target": "room",
+            "method": method,
+            "statuss": 200
+          }
+          this.send(util.CONTROL_ID, data)
+          resolv(data)
+        })
+      .catch(err => reject(err))
+    })
+  }
+
 }
 
 module.exports = ExtInterface

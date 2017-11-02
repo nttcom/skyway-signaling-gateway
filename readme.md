@@ -104,6 +104,13 @@ use SSG_APIKEY, SSG_ORIGIN, SSG_SECURE and SSG_UUID for each
 SSG_APIKEY=XXXXXXXX-XXXX-XXXX-XXXXXXXXXXXX SSG_ORIGIN=http://localhost SSG_UUID="test-uuid" node app.js
 ```
 
+## join room without 3rd party appp
+
+use ROOMNAME env
+
+```bash
+ROOMNAME=testroom node app.js
+```
 
 # Testing
 

@@ -12,6 +12,9 @@ const util = require('./miscs/util')
 class DatachannelController extends EventEmitter {
   /**
    * constructor
+   *
+   * @params {object} options
+   * @params {string} options.room_name
    */
   constructor(){
     super();
@@ -29,13 +32,20 @@ class DatachannelController extends EventEmitter {
    *
    */
   start() {
+    const room_name = process.env.ROOMNAME || null
+
     return new Promise((resolv, reject) => {
       this.pluginConn.start()
         .then(() => this.extInterface.start())
         .then(() => {
           this.setHandler()
-          resolv()
-        }).catch(err => reject(err))
+          if(room_name) {
+            return this.extInterface.sendRoomRequest(room_name, 'join')
+          } else {
+            return Promise.resolve()
+          }
+        }).then(() => resolv())
+        .catch(err => reject(err))
     })
   }
 
