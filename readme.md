@@ -112,6 +112,19 @@ use ROOMNAME env
 ROOMNAME=testroom node app.js
 ```
 
+## use MQTT interface
+
+use MQTT_TOPIC and MQTT_URL env
+
+when MQTT_TOPIC is omitted, ssg does not provide MQTT interface feature
+when MQTT_URL is omitted, it use ``mqtt://localhost``
+
+```bash
+ROOMNAME=testroom MQTT_TOPIC=testtopic node app.js
+```
+
+
+
 # Testing
 
 ## run unit test
