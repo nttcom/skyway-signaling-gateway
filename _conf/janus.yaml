@@ -13,5 +13,3 @@ data_sender:
 # tcp port interface for 3rd party app
 external:
   tcp_port: 15000
-# when ENABLE_AUTO_STREAMING is set as true, the process indicated by below will be automatically executed when client request happen.
-streaming_process: "path_to_streaming_process"

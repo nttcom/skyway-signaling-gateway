@@ -9,8 +9,9 @@ const _     = require('underscore')
 const log4js = require('log4js')
 const logger = log4js.getLogger('redux-action')
 const yaml = require('node-yaml')
+const path = require('path')
 
-const CONF = yaml.readSync('../../conf/janus.yaml')
+const CONF = yaml.readSync( path.join( process.env.HOME, '/.ssg/janus.yaml') )
 const ENDPOINT = CONF['rest_scheme'] + "://" + CONF['endpoint_addr'] + ":" + CONF['rest_port']
 
 

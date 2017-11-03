@@ -1,0 +1,4 @@
+name: yourdevice
+description: Your device powered by SkyWay IoT SDK
+streaming:
+  enable: true

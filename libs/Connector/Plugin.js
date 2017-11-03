@@ -10,11 +10,12 @@ const Rx     = require('rx')
 const fetch  = require('node-fetch')
 const express = require('express')
 const app    = express()
+const path   = require('path')
 
 const mqttConnector = require('./Mqtt')
 
 const yaml   = require('node-yaml')
-const CONF   = yaml.readSync('../../conf/janus.yaml')
+const CONF   = yaml.readSync( path.join( process.env.HOME, '/.ssg/janus.yaml') )
 
 const logger = log4js.getLogger('PluginConnector')
 const util = require('../miscs/util')

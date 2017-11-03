@@ -6,6 +6,13 @@ Signaling Gateway for Skyway and Janus Gateway
 
 see SkyWay IoT SDK [install manual](https://github.com/nttcom/skyway-iot-sdk/blob/master/docs/how_to_install.md)
 
+(T.B.D) after registered to npm
+```
+$ npm -g install skyway-signaling-gateway
+$ ssg setup
+$ ssg start
+```
+
 # Supported features
 
 We support three features shown below.

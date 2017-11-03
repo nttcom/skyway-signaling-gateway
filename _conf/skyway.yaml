@@ -1,3 +1,4 @@
 secure: true # when it's true, use https for connecting skyway server
 apikey: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX # you can get apikey from our dashboard https://webrtc.ecl.ntt.com/en/login.html
 origin: http://localhost # please set domain which is match with above apikey setting
+roomname: testroom

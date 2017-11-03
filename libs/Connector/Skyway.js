@@ -3,13 +3,14 @@
 const EventEmitter = require("events").EventEmitter
 const log4js = require('log4js')
 const Socket = require('./socket')
+const path = require('path')
 
 const { setPairOfPeerids } = require('../redux-libs/actions')
 const logger = log4js.getLogger('SkyWayConnector');
 
 const util = require("../miscs/util")
 const yaml = require('node-yaml')
-const CONF = yaml.readSync('../../conf/skyway.yaml')
+const CONF = yaml.readSync( path.join( process.env.HOME, '/.ssg/skyway.yaml') )
 
 
 class SkywayConnector extends EventEmitter {

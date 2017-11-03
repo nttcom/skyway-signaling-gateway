@@ -5,13 +5,14 @@ const http = require('http')
 const fs = require('fs')
 const fetch = require('node-fetch')
 const util = require('./miscs/util')
+const path = require('path')
 
 const logger = log4js.getLogger('webserver')
 
 const yaml = require('node-yaml')
-const skyway_conf = yaml.readSync('../conf/skyway.yaml')
+const skyway_conf = yaml.readSync( path.join( process.env.HOME, '/.ssg/skyway.yaml') )
 
-app.use(express.static(__dirname+'/../public'));
+app.use(express.static( path.join(__dirname, '/../public') ));
 
 const httpServer = http.createServer(app)
 

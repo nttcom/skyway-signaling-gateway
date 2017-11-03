@@ -1,8 +1,15 @@
 const mqtt = require('mqtt')
+const yaml = require('node-yaml')
+const path = require('path')
+const log4js = require('log4js')
 const EventEmitter = require('events').EventEmitter
 
-const MQTT_URL = process.env.MQTT_URL || 'mqtt://localhost'
-const MQTT_TOPIC = process.env.MQTT_TOPIC || null
+const conf = yaml.readSync( path.join( process.env.HOME, "/.ssg/mqtt.yaml" ))
+
+const MQTT_URL = process.env.MQTT_URL || conf.url
+const MQTT_TOPIC = process.env.MQTT_TOPIC || conf.topic
+
+const logger = log4js.getLogger('MQTT Connector')
 
 class MqttConnector extends EventEmitter {
   constructor() {
@@ -17,8 +24,13 @@ class MqttConnector extends EventEmitter {
         this.client = mqtt.connect(MQTT_URL)
 
         this.client.on('connect', () => {
+          logger.info(`connected to mqtt broaker ${MQTT_URL}`)
+
           this.client.subscribe(MQTT_TOPIC)
+          logger.info(`subscribed to topic : ${MQTT_TOPIC}`)
+
           this._setEventHandler()
+
           resolve()
         })
 

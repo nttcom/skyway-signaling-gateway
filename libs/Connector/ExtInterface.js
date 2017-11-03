@@ -11,11 +11,12 @@ const EventEmitter = require('events').EventEmitter
 const fetch = require('node-fetch')
 const log4js = require('log4js')
 const util = require('../miscs/util')
+const path = require('path')
 
 const logger = log4js.getLogger('ExtInterface')
 
 const yaml = require('node-yaml')
-const CONF = yaml.readSync('../../conf/janus.yaml')
+const CONF = yaml.readSync( path.join( process.env.HOME, '/.ssg/janus.yaml') )
 const port = CONF['external']['tcp_port']
 
 
