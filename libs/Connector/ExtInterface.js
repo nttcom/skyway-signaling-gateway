@@ -41,6 +41,7 @@ class ExtInterface extends EventEmitter {
    *
    */
   start() {
+		logger.debug('start')
     return new Promise((resolv, reject) => {
       util.loadAppYaml()
         .then( app_conf => {
@@ -53,13 +54,15 @@ class ExtInterface extends EventEmitter {
               socket.on('end', () => {
                 logger.info("socket for the 3rd party app closed. we'll remove this socket object")
                   this.clients.splice(this.clients.indexOf(socket), 1)
-                  logger.debug(this.clients.length)
               })
 
             this._setExtDataObserver(socket)
           }).listen(port, () => {
             resolv()
-          }).on('error', err => reject(err))
+          }).on('error', err => {
+						logger.warn(err.message)
+						reject(err)
+					})
         })
         .catch(err => reject(err))
     })
@@ -169,6 +172,7 @@ class ExtInterface extends EventEmitter {
    *  #=> leave from 'testroom'
    */
   sendRoomRequest(room_name, method) {
+		logger.debug(this.ports.SIGNALING_CONTROLLER)
     return new Promise((resolv, reject) => {
       fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/room/${room_name}?method=${method}`)
         .then(res => res.text())

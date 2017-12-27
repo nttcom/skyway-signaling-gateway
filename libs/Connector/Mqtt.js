@@ -20,7 +20,8 @@ class MqttConnector extends EventEmitter {
 
   start() {
     return new Promise((resolve, reject) => {
-      if(MQTT_TOPIC) {
+      if(MQTT_URL && MQTT_TOPIC) {
+				logger.info(`start connecting to ${MQTT_URL} with topic "${MQTT_TOPIC}"`);
         this.client = mqtt.connect(MQTT_URL)
 
         this.client.on('connect', () => {
@@ -30,12 +31,11 @@ class MqttConnector extends EventEmitter {
           logger.info(`subscribed to topic : ${MQTT_TOPIC}`)
 
           this._setEventHandler()
-
-          resolve()
         })
+        resolve()
 
         this.client.on('error', err => {
-          reject(err)
+          logger.warn(err.message)
         })
       } else {
         // do nothing
@@ -50,7 +50,12 @@ class MqttConnector extends EventEmitter {
 
   _setEventHandler() {
     this.client.on('message', (topic, message) => {
-      this.emit('message', {topic, payload: JSON.parse(message.toString())})
+			try {
+      	this.emit('message', {topic, payload: JSON.parse(message.toString())})
+			} catch(err) {
+				// message will not be Object
+      	this.emit('message', {topic, payload: message.toString()})
+			}
     })
   }
 }

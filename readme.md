@@ -123,14 +123,36 @@ ROOMNAME=testroom node app.js
 
 use MQTT_TOPIC and MQTT_URL env
 
-when MQTT_TOPIC is omitted, ssg does not provide MQTT interface feature
-when MQTT_URL is omitted, it use ``mqtt://localhost``
-
 ```bash
-ROOMNAME=testroom MQTT_TOPIC=testtopic node app.js
+MQTT_URL=mqtt://localhost MQTT_TOPIC=testtopic node app.js
 ```
 
+## How to test MQTT
 
+* Install mosquitto
+
+```bash
+$ sudo apt-get -y install mosquitto
+```
+
+* test with mosquitto_client
+
+Install mosquitto client
+
+```bash
+$ sudo apt-get -y install mosquitto-clients
+```
+
+publish
+
+```bash
+$ mosquitto_pub -m 'test' -t 'testtopic/a'
+```
+
+subscribe
+```bash
+$ mosquitto_sub -t 'testtopic/a'
+```
 
 # Testing
 

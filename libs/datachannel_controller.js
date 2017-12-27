@@ -34,6 +34,7 @@ class DatachannelController extends EventEmitter {
    */
   start() {
     const room_name = process.env.ROOMNAME || conf.roomname || null
+		logger.info(`room name: ${room_name}`);
 
     return new Promise((resolv, reject) => {
       this.pluginConn.start()
@@ -45,7 +46,11 @@ class DatachannelController extends EventEmitter {
           } else {
             return Promise.resolve()
           }
-        }).then(() => resolv())
+        }).then(() => {
+					if(room_name) logger.info(`room ${room_name} joined`);
+					logger.info(`finished starting datachannel_controller`);
+					resolv()
+				})
         .catch(err => reject(err))
     })
   }

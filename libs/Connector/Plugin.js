@@ -161,7 +161,6 @@ class PluginConnector extends EventEmitter {
         for(var id in this.timestamps) if(this.timestamps.hasOwnProperty(id)) {
           var ts = this.timestamps[id]
           var diff = Date.now() - ts
-          logger.debug(`${id}: timestamp ${ts}, diff ${diff}/${util.KEEPALIVE_TIMEOUT}`)
           if( diff > util.KEEPALIVE_TIMEOUT ) {
             fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/connection/${id}`, {method: 'DELETE'})
               .then(res => res.text())
