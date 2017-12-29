@@ -3,7 +3,7 @@
  *
  */
 const EventEmitter = require("events").EventEmitter
-const dgram  = require('dgram')
+const net    = require('net')
 const log4js = require('log4js')
 const Int64  = require('node-int64')
 const Rx     = require('rx')
@@ -33,16 +33,13 @@ class PluginConnector extends EventEmitter {
   constructor(){
     super()
 
-    this.receiver_port = CONF['data_receiver']['port']
-    this.sender_dest = CONF['endpoint_addr']
-    this.sender_port = CONF['data_sender']['port']
+    this.janus_port = CONF['data_port']['port']
+    this.janus_dest = CONF['endpoint_addr']
     this.timestamps = {} // {${peerid}: timestamp}
 
     // logger.debug(`sender ${this.sender_dest}:${this.sender_port}, receiver port ${this.receiver_port}`)
 
-    this.sender = dgram.createSocket('udp4')
-    this.receiver = dgram.createSocket('udp4')
-
+    this.tcp_client = new net.Socket();
   }
 
   /**
@@ -55,8 +52,8 @@ class PluginConnector extends EventEmitter {
         this.ports = app_conf.ports
         return this.startRESTServer()
       }).then(() => {
-        this.receiver.bind({address: "0.0.0.0", port: this.receiver_port}, () => {
-          logger.info(`succeeded to bind port ${this.receiver_port}`);
+				this.tcp_client.connect( this.janus_port, this.janus_dest, () => {
+          logger.info(`succeeded to connect janus-plugin: ${this.janus_dest}:${this.janus_port}`);
           this.setRecieveHandler();
           return Promise.resolve()
         }).on('error', err => reject(err))
@@ -66,7 +63,6 @@ class PluginConnector extends EventEmitter {
         resolv()
       })
       .catch(err => reject(err))
-
     })
   }
 
@@ -75,7 +71,7 @@ class PluginConnector extends EventEmitter {
    */
   setRecieveHandler() {
     // pre normalization
-    const messageSource = Rx.Observable.fromEvent( this.receiver, 'message')
+    const messageSource = Rx.Observable.fromEvent( this.tcp_client, 'data')
       .filter( buff => buff.length > 9 )
       .filter( buff => buff instanceof Buffer )
       .map( buff => {
@@ -173,7 +169,7 @@ class PluginConnector extends EventEmitter {
         }
       })
     // error handling
-    this.receiver.on('error', err => this.emit("error", err));
+    this.tcp_client.on('error', err => this.emit("error", err));
   }
 
   /**
@@ -187,11 +183,17 @@ class PluginConnector extends EventEmitter {
     if(handle_id instanceof Buffer && handle_id.length === 8) {
       let payload
 
-      if(data instanceof Buffer) payload = data
-      else if(typeof(data) === 'object') payload = new Buffer(JSON.stringify(data))
-      else payload = new Buffer(data)
+			logger.debug(data);
 
-      this.sender.send([handle_id, payload], this.sender_port, this.sender_dest)
+      if(data instanceof Buffer) payload = data
+      else if(typeof(data) === 'object') payload = Buffer.from(JSON.stringify(data))
+      else payload = Buffer.from(data)
+
+			// todo: see if Array works for write()
+			// todo: check this.tcp_client is connected or not
+			if( !this.tcp_client.connecting && !this.tcp_client.destroyed ) {
+				this.tcp_client.write(Buffer.concat([handle_id, payload]))
+			}
     }
   }
 
