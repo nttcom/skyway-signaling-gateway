@@ -109,6 +109,8 @@ class PluginConnector extends EventEmitter {
         const strHandleId = obj.handle_id.toString("hex")
         const t_m = obj.message.split("/")
 
+				logger.debug(`control message - ${obj.message}`);
+
         const target = t_m[0]
         let method, src, port, url
 
