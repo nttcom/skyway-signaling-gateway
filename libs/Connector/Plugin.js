@@ -33,8 +33,8 @@ class PluginConnector extends EventEmitter {
   constructor(){
     super()
 
-    this.janus_port = CONF['data_port']['port']
-    this.janus_dest = CONF['endpoint_addr']
+    this.janus_port = process.env.JANUS_DATA_PORT || CONF['data_port']
+    this.janus_dest = process.env.JANUS_ENDPOINT_ADDR || CONF['endpoint_addr']
     this.timestamps = {} // {${peerid}: timestamp}
 
     // logger.debug(`sender ${this.sender_dest}:${this.sender_port}, receiver port ${this.receiver_port}`)
@@ -90,9 +90,14 @@ class PluginConnector extends EventEmitter {
           handle_id: obj.handle_id,
           payload: obj.payload
         }
-        const mqttObj = JSON.parse(data.payload.toString())
-        mqttConnector.publish( mqttObj )
-        this.emit('message', data)
+
+				try {
+					const mqttObj = JSON.parse(data.payload.toString())
+					mqttConnector.publish( mqttObj )
+					this.emit('message', data)
+				} catch(err) {
+					logger.error("Error while processing data channel data.", err.message)
+				}
       })
 
     //////////////////////////////////////////////////////

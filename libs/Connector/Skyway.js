@@ -28,7 +28,8 @@ class SkywayConnector extends EventEmitter {
     this.apikey    = key
 
     // configure random parameters
-    this.myPeerid = process.env.PEERID || CONF['peerid'] || "SSG_"+util.randomIdForSkyway();
+    this.myPeerid = process.env.PEERID || CONF['peerid'] || util.randomIdForSkyway();
+		this.myPeerid = `SSG_${this.myPeerid}`;
     this.token    = util.randomTokenForSkyway();
     this.brPeerid = null;
     this.options  = options;

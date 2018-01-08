@@ -11,26 +11,29 @@ const logger = log4js.getLogger('SSG')
 if( _.last(process.argv) === 'setup') {
   do_setup()
 } else if( _.last(process.argv) === 'start') {
-  if (!check_conf()) return
+  if (!check_conf()) {
+    console.info("run 'ssg setup' first.")
+		return;
+	} else {
+		const SignalingController = require('./libs/signaling_controller')
+		const DatachannelController = require('./libs/datachannel_controller')
+		const ProfileManager = require('./libs/profile_manager')
+		const webserver = require('./libs/webserver')
 
-  const SignalingController = require('./libs/signaling_controller')
-  const DatachannelController = require('./libs/datachannel_controller')
-  const ProfileManager = require('./libs/profile_manager')
-  const webserver = require('./libs/webserver')
+		// ignore error for self signed tls connection
+		process.env.NODE_TLS_REJECT_UNAUTHORIZED="0"
 
-  // ignore error for self signed tls connection
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED="0"
-
-  // Start each micro-servers
-  SignalingController.start()
-    .then(() => ProfileManager.start())
-    .then(() => DatachannelController.start())
-    .then(() => webserver.start())
-    .then(() => logger.info('SSG get started'))
-    .catch(err => {
-      logger.fatal(err)
-      process.exit(1)
-    })
+		// Start each micro-servers
+		SignalingController.start()
+			.then(() => ProfileManager.start())
+			.then(() => DatachannelController.start())
+			.then(() => webserver.start())
+			.then(() => logger.info('SSG get started'))
+			.catch(err => {
+				logger.fatal(err)
+				process.exit(1)
+			})
+	}
 } else if( _.last(process.argv) === 'reset') {
   reset_conf()
 } else {

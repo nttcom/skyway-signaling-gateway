@@ -50,15 +50,7 @@ module.exports.do_setup = () => {
 }
 
 module.exports.check_conf = () => {
-  try {
-    console.log(confdir)
-    fs.pathExistsSync(confdir)
-    return true
-  } catch(err) {
-    console.warn(err.message)
-    console.warn("run 'ssg setup' first.")
-    return false
-  }
+  return fs.pathExistsSync(confdir);
 }
 
 module.exports.reset_conf = () => {

@@ -4,12 +4,8 @@ endpoint_addr: 127.0.0.1
 rest_scheme: https
 # port number of JanusGateway REST api
 rest_port: 8089
-# udp receiving port from JanusGateway (for DataChannel)
-data_receiver:
-  port: 15001
-# udp sending port to JanusGateway (for DataChannel)
-data_sender:
-  port: 15000
+# TCP interface port to bind with Janus DataChannel
+data_port: 14999
 # tcp port interface for 3rd party app
 external:
   tcp_port: 15000
