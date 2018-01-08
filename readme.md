@@ -79,21 +79,9 @@ You have two way.
 $ PEERID=ssgid node app.js
 ```
 
+(preamble of ``SSG_`` will be added to assigned peerid)
+
 setting envronment will overwrite it in skyway.yaml
-
-## enable automatic execution of streaming process (alpha feature)
-
-You can automatically execute streaming process. To enable this feature, set ENABLE_AUTO_STREAMING=true while starting process as shown below.
-
-```bash
-$ ENABLE_AUTO_STREAMING=true node app.js
-```
-
-Also, you need to set the path of streaming process in janus.yaml.
-
-```janus.yaml
-streaming_process: "/bin/bash ~/signalinggateway/skywayiot-sdk-test/media_streaming_transfer_test.sh"
-```
 
 ## force OPUS
 
@@ -118,6 +106,17 @@ use ROOMNAME env
 ```bash
 ROOMNAME=testroom node app.js
 ```
+
+## set janus parameter with environment
+
+* JANUS_REST_SCHEME
+  - ``http`` or ``https``
+* JANUS_ENDPOINT_ADDR
+  - e.g. ``localhost``
+* JANUS_REST_PORT
+  - e.g. ``8089``
+* JANUS_DATA_PORT
+  - e.g. ``14999``
 
 ## use MQTT interface
 
