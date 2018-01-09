@@ -4,12 +4,10 @@ Signaling Gateway for Skyway and Janus Gateway
 
 ## How to install and setup
 
-see SkyWay IoT SDK [install manual](https://github.com/nttcom/skyway-iot-sdk/blob/master/docs/how_to_install.md)
-
-(T.B.D) after registered to npm
 ```
-$ npm -g install skyway-signaling-gateway
+$ npm -g install ssg
 $ ssg setup
+# register your API key.
 $ ssg start
 ```
 
@@ -18,7 +16,8 @@ $ ssg start
 We support three features shown below.
 
 1. bidirectional data channel communication
-  - 3rd party interface for this is TCP (by default 15000)
+  - 3rd party interface is TCP (by default 15000)
+  - interface for janus skyway plugin is also TCP (by default 14999)
 2. one-way media stream from Janus Gateway
   - leveraging streaming plugin of Janus Gateway
 3. one-way voice stream to Janus Gateway
