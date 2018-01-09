@@ -10,12 +10,13 @@ const yaml = require('node-yaml')
 const uuid = require('uuid/v4') // random
 const express = require('express')
 const fetch = require('node-fetch')
+const path = require('path')
 
 const app = express()
 const logger = log4js.getLogger("ProfileManager")
 const util = require('./miscs/util')
 
-const CONFFILE = __dirname + "/../conf/profile.yaml"
+const CONFFILE = path.join(process.env.HOME, "/.ssg/profile.yaml")
 
 class ProfileManager extends EventEmitter {
   constructor() {

@@ -1,8 +1,9 @@
 const _    = require('underscore')
 const Enum = require('enum')
 const yaml = require('node-yaml')
+const path = require('path')
 
-const APP_YAML = __dirname + '/../../conf/app.yaml'
+const APP_YAML = path.join( process.env.HOME, '/.ssg/app.yaml' )
 
 const clientMessages = new Enum([
     'SEND_OFFER',

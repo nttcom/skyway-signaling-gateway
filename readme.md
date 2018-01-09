@@ -6,6 +6,13 @@ Signaling Gateway for Skyway and Janus Gateway
 
 see SkyWay IoT SDK [install manual](https://github.com/nttcom/skyway-iot-sdk/blob/master/docs/how_to_install.md)
 
+(T.B.D) after registered to npm
+```
+$ npm -g install skyway-signaling-gateway
+$ ssg setup
+$ ssg start
+```
+
 # Supported features
 
 We support three features shown below.
@@ -72,21 +79,9 @@ You have two way.
 $ PEERID=ssgid node app.js
 ```
 
+(preamble of ``SSG_`` will be added to assigned peerid)
+
 setting envronment will overwrite it in skyway.yaml
-
-## enable automatic execution of streaming process (alpha feature)
-
-You can automatically execute streaming process. To enable this feature, set ENABLE_AUTO_STREAMING=true while starting process as shown below.
-
-```bash
-$ ENABLE_AUTO_STREAMING=true node app.js
-```
-
-Also, you need to set the path of streaming process in janus.yaml.
-
-```janus.yaml
-streaming_process: "/bin/bash ~/signalinggateway/skywayiot-sdk-test/media_streaming_transfer_test.sh"
-```
 
 ## force OPUS
 
@@ -104,6 +99,59 @@ use SSG_APIKEY, SSG_ORIGIN, SSG_SECURE and SSG_UUID for each
 SSG_APIKEY=XXXXXXXX-XXXX-XXXX-XXXXXXXXXXXX SSG_ORIGIN=http://localhost SSG_UUID="test-uuid" node app.js
 ```
 
+## join room without 3rd party appp
+
+use ROOMNAME env
+
+```bash
+ROOMNAME=testroom node app.js
+```
+
+## set janus parameter with environment
+
+* JANUS_REST_SCHEME
+  - ``http`` or ``https``
+* JANUS_ENDPOINT_ADDR
+  - e.g. ``localhost``
+* JANUS_REST_PORT
+  - e.g. ``8089``
+* JANUS_DATA_PORT
+  - e.g. ``14999``
+
+## use MQTT interface
+
+use MQTT_TOPIC and MQTT_URL env
+
+```bash
+MQTT_URL=mqtt://localhost MQTT_TOPIC=testtopic node app.js
+```
+
+## How to test MQTT
+
+* Install mosquitto
+
+```bash
+$ sudo apt-get -y install mosquitto
+```
+
+* test with mosquitto_client
+
+Install mosquitto client
+
+```bash
+$ sudo apt-get -y install mosquitto-clients
+```
+
+publish
+
+```bash
+$ mosquitto_pub -m 'test' -t 'testtopic/a'
+```
+
+subscribe
+```bash
+$ mosquitto_sub -t 'testtopic/a'
+```
 
 # Testing
 

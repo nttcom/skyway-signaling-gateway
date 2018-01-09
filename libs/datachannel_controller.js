@@ -5,13 +5,17 @@ const EventEmitter = require('events').EventEmitter
 const log4js = require('log4js')
 const logger = log4js.getLogger("DatachannelController")
 const util = require('./miscs/util')
+const yaml = require('node-yaml')
+const path = require('path')
 
-
-
+const conf = yaml.readSync( path.join( process.env.HOME, '/.ssg/skyway.yaml') )
 
 class DatachannelController extends EventEmitter {
   /**
    * constructor
+   *
+   * @params {object} options
+   * @params {string} options.room_name
    */
   constructor(){
     super();
@@ -29,13 +33,25 @@ class DatachannelController extends EventEmitter {
    *
    */
   start() {
+    const room_name = process.env.ROOMNAME || conf.roomname || null
+		logger.info(`room name: ${room_name}`);
+
     return new Promise((resolv, reject) => {
       this.pluginConn.start()
         .then(() => this.extInterface.start())
         .then(() => {
           this.setHandler()
-          resolv()
-        }).catch(err => reject(err))
+          if(room_name) {
+            return this.extInterface.sendRoomRequest(room_name, 'join')
+          } else {
+            return Promise.resolve()
+          }
+        }).then(() => {
+					if(room_name) logger.info(`room ${room_name} joined`);
+					logger.info(`finished starting datachannel_controller`);
+					resolv()
+				})
+        .catch(err => reject(err))
     })
   }
 

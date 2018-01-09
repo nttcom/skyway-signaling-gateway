@@ -3,16 +3,19 @@
  *
  */
 const EventEmitter = require("events").EventEmitter
-const dgram  = require('dgram')
+const net    = require('net')
 const log4js = require('log4js')
 const Int64  = require('node-int64')
 const Rx     = require('rx')
 const fetch  = require('node-fetch')
 const express = require('express')
 const app    = express()
+const path   = require('path')
+
+const mqttConnector = require('./Mqtt')
 
 const yaml   = require('node-yaml')
-const CONF   = yaml.readSync('../../conf/janus.yaml')
+const CONF   = yaml.readSync( path.join( process.env.HOME, '/.ssg/janus.yaml') )
 
 const logger = log4js.getLogger('PluginConnector')
 const util = require('../miscs/util')
@@ -30,16 +33,13 @@ class PluginConnector extends EventEmitter {
   constructor(){
     super()
 
-    this.receiver_port = CONF['data_receiver']['port']
-    this.sender_dest = CONF['endpoint_addr']
-    this.sender_port = CONF['data_sender']['port']
+    this.janus_port = process.env.JANUS_DATA_PORT || CONF['data_port']
+    this.janus_dest = process.env.JANUS_ENDPOINT_ADDR || CONF['endpoint_addr']
     this.timestamps = {} // {${peerid}: timestamp}
 
     // logger.debug(`sender ${this.sender_dest}:${this.sender_port}, receiver port ${this.receiver_port}`)
 
-    this.sender = dgram.createSocket('udp4')
-    this.receiver = dgram.createSocket('udp4')
-
+    this.tcp_client = new net.Socket();
   }
 
   /**
@@ -52,12 +52,17 @@ class PluginConnector extends EventEmitter {
         this.ports = app_conf.ports
         return this.startRESTServer()
       }).then(() => {
-        this.receiver.bind({address: "0.0.0.0", port: this.receiver_port}, () => {
-          logger.info(`succeeded to bind port ${this.receiver_port}`);
+				this.tcp_client.connect( this.janus_port, this.janus_dest, () => {
+          logger.info(`succeeded to connect janus-plugin: ${this.janus_dest}:${this.janus_port}`);
           this.setRecieveHandler();
-          resolv()
+          return Promise.resolve()
         }).on('error', err => reject(err))
-      }).catch(err => reject(err))
+      }).then(() => mqttConnector.start())
+      .then(() => {
+        this._setMqttHandler()
+        resolv()
+      })
+      .catch(err => reject(err))
     })
   }
 
@@ -66,7 +71,7 @@ class PluginConnector extends EventEmitter {
    */
   setRecieveHandler() {
     // pre normalization
-    const messageSource = Rx.Observable.fromEvent( this.receiver, 'message')
+    const messageSource = Rx.Observable.fromEvent( this.tcp_client, 'data')
       .filter( buff => buff.length > 9 )
       .filter( buff => buff instanceof Buffer )
       .map( buff => {
@@ -85,7 +90,14 @@ class PluginConnector extends EventEmitter {
           handle_id: obj.handle_id,
           payload: obj.payload
         }
-        this.emit('message', data)
+
+				try {
+					const mqttObj = JSON.parse(data.payload.toString())
+					mqttConnector.publish( mqttObj )
+					this.emit('message', data)
+				} catch(err) {
+					logger.error("Error while processing data channel data.", err.message)
+				}
       })
 
     //////////////////////////////////////////////////////
@@ -101,6 +113,8 @@ class PluginConnector extends EventEmitter {
       .subscribe(obj => {
         const strHandleId = obj.handle_id.toString("hex")
         const t_m = obj.message.split("/")
+
+				logger.debug(`control message - ${obj.message}`);
 
         const target = t_m[0]
         let method, src, port, url
@@ -150,7 +164,6 @@ class PluginConnector extends EventEmitter {
         for(var id in this.timestamps) if(this.timestamps.hasOwnProperty(id)) {
           var ts = this.timestamps[id]
           var diff = Date.now() - ts
-          logger.debug(`${id}: timestamp ${ts}, diff ${diff}/${util.KEEPALIVE_TIMEOUT}`)
           if( diff > util.KEEPALIVE_TIMEOUT ) {
             fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/connection/${id}`, {method: 'DELETE'})
               .then(res => res.text())
@@ -163,7 +176,7 @@ class PluginConnector extends EventEmitter {
         }
       })
     // error handling
-    this.receiver.on('error', err => this.emit("error", err));
+    this.tcp_client.on('error', err => this.emit("error", err));
   }
 
   /**
@@ -177,12 +190,24 @@ class PluginConnector extends EventEmitter {
     if(handle_id instanceof Buffer && handle_id.length === 8) {
       let payload
 
-      if(data instanceof Buffer) payload = data
-      else if(typeof(data) === 'object') payload = new Buffer(JSON.stringify(data))
-      else payload = new Buffer(data)
+			logger.debug(data);
 
-      this.sender.send([handle_id, payload], this.sender_port, this.sender_dest)
+      if(data instanceof Buffer) payload = data
+      else if(typeof(data) === 'object') payload = Buffer.from(JSON.stringify(data))
+      else payload = Buffer.from(data)
+
+			// todo: see if Array works for write()
+			// todo: check this.tcp_client is connected or not
+			if( !this.tcp_client.connecting && !this.tcp_client.destroyed ) {
+				this.tcp_client.write(Buffer.concat([handle_id, payload]))
+			}
     }
+  }
+
+  _setMqttHandler() {
+    mqttConnector.on('message', ({topic, payload}) => {
+      this.send(util.BROADCAST_ID, {topic, payload})
+    })
   }
 
   /**

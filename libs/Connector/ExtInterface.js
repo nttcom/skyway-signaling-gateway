@@ -11,11 +11,12 @@ const EventEmitter = require('events').EventEmitter
 const fetch = require('node-fetch')
 const log4js = require('log4js')
 const util = require('../miscs/util')
+const path = require('path')
 
 const logger = log4js.getLogger('ExtInterface')
 
 const yaml = require('node-yaml')
-const CONF = yaml.readSync('../../conf/janus.yaml')
+const CONF = yaml.readSync( path.join( process.env.HOME, '/.ssg/janus.yaml') )
 const port = CONF['external']['tcp_port']
 
 
@@ -40,6 +41,7 @@ class ExtInterface extends EventEmitter {
    *
    */
   start() {
+		logger.debug('start')
     return new Promise((resolv, reject) => {
       util.loadAppYaml()
         .then( app_conf => {
@@ -52,13 +54,15 @@ class ExtInterface extends EventEmitter {
               socket.on('end', () => {
                 logger.info("socket for the 3rd party app closed. we'll remove this socket object")
                   this.clients.splice(this.clients.indexOf(socket), 1)
-                  logger.debug(this.clients.length)
               })
 
             this._setExtDataObserver(socket)
           }).listen(port, () => {
             resolv()
-          }).on('error', err => reject(err))
+          }).on('error', err => {
+						logger.warn(err.message)
+						reject(err)
+					})
         })
         .catch(err => reject(err))
     })
@@ -136,19 +140,8 @@ class ExtInterface extends EventEmitter {
             }
           }
         }
-        fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/room/${obj.roomName}?method=${obj.method}`)
-          .then(res => res.text())
-          .then(mesg => {
-            const data = {
-              "type": "response",
-              "target": obj.target,
-              "method": obj.method,
-              "statuss": 200
-            }
-            this.send(util.CONTROL_ID, data)
-          })
-          .catch(logger.warn)
-      });
+        this.sendRoomRequest(obj.roomName, obj.method)
+     });
 
     const dataSource = source
       .filter(obj => !obj.is_control)
@@ -162,6 +155,41 @@ class ExtInterface extends EventEmitter {
         this.emit('message', data)
       })
   }
+
+  /**
+   * send room request (join or leave)
+   *
+   * @params {string} room_name - name of room
+   * @params {string} method    - method name (join or leave)
+   * @returns {Promise<Object>}
+   *
+   * @example
+   *
+   * this.sendRoomRequest('testroom', 'join')
+   *  #=> join 'testroom'
+   *
+   * this.sendRoomRequest('testroom', 'leave')
+   *  #=> leave from 'testroom'
+   */
+  sendRoomRequest(room_name, method) {
+		logger.debug(this.ports.SIGNALING_CONTROLLER)
+    return new Promise((resolv, reject) => {
+      fetch(`http://localhost:${this.ports.SIGNALING_CONTROLLER}/room/${room_name}?method=${method}`)
+        .then(res => res.text())
+        .then(mesg => {
+          const data = {
+            "type": "response",
+            "target": "room",
+            "method": method,
+            "statuss": 200
+          }
+          this.send(util.CONTROL_ID, data)
+          resolv(data)
+        })
+      .catch(err => reject(err))
+    })
+  }
+
 }
 
 module.exports = ExtInterface

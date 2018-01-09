@@ -3,6 +3,7 @@ const EventEmitter = require("events").EventEmitter
 const Rx = require('rx')
 const fetch = require('node-fetch')
 const express = require('express')
+const path = require('path')
 
 const app = express()
 
@@ -12,13 +13,12 @@ const log4js = require('log4js')
 const ssgStore = require('./redux-libs/store')
 const Skyway = require('./Connector/Skyway')
 
-const streaming_process = require('./miscs/streaming_process')
 const sdp = require('./miscs/sdp')
 
 const yaml = require('node-yaml')
 
-const CONF = yaml.readSync('../conf/skyway.yaml')
-const JANUS_CONF = yaml.readSync('../conf/janus.yaml')
+const CONF = yaml.readSync( path.join( process.env.HOME, '/.ssg/skyway.yaml') )
+const JANUS_CONF = yaml.readSync( path.join( process.env.HOME, '/.ssg/janus.yaml') )
 
 const {
   RESPONSE_CREATE_ID,
@@ -171,11 +171,6 @@ class SignalingController extends EventEmitter {
       }
 
       if( !_.has(connections, connection_id) ) {
-        // In this case, do checking stream sessions availability.
-        // When there is no, we'll kill streaming process.
-
-        streaming_process.stop_if_no_streaming(connections)
-
         logger.info(`connection ${connection_id} already deleted`);
         return;
       }
@@ -221,8 +216,6 @@ class SignalingController extends EventEmitter {
 
           break;
         case LONGPOLLING_WEBRTCUP:
-          // execute media streaming process when it is not work yet.
-          streaming_process.attempt_to_start(connections)
           break;
         default:
           break;

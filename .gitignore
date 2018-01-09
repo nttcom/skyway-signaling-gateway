@@ -34,6 +34,7 @@ node_modules
 
 # config file
 conf/*.json
+conf/*.yaml
 
 # media file
 .wav
