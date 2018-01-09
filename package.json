@@ -1,6 +1,6 @@
 {
   "name": "skyway-signaling-gateway",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "A protocol gateway for Janus Gateway REST API and SkyWay Signaling Server",
   "repository": {
     "type": "git",
