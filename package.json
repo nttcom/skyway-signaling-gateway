@@ -1,7 +1,7 @@
 {
   "name": "skyway-signaling-gateway",
   "version": "0.5.5",
-  "description": "A protocol gateway between Janus Gateway REST API and SkyWay Signaling Server",
+  "description": "A protocol gateway for Janus Gateway REST API and SkyWay Signaling Server",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nttcom/skyway-signaling-gateway.git"
@@ -20,7 +20,7 @@
   ],
   "author": {
     "name": "NTT Communications",
-    "url": "http://skyway.io/en"
+    "url": "https://webrtc.ecl.ntt.com/en/"
   },
   "license": "Apache 2.0",
   "dependencies": {
