@@ -5,7 +5,7 @@ Signaling Gateway for Skyway and Janus Gateway
 ## How to install and setup
 
 ```
-$ npm -g install ssg
+$ npm -g install skyway-signaling-gateway
 $ ssg setup
 # register your API key.
 $ ssg start
