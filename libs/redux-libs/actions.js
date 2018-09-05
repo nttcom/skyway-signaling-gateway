@@ -599,7 +599,7 @@ function startLongPolling(connection_id) {
       .then( json => {
         if(json === null) {
           // when response is ng, just restart long polling
-          dispatch(stargLongPolling(connection_id))
+          dispatch(startLongPolling(connection_id))
         } else {
           // dispatch reciveLongPolling function to change start
           dispatch(receiveLongPolling(connection_id, json))
